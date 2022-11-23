@@ -5,7 +5,9 @@ from tkinter import filedialog,ttk
 import pandas
 import test
 
+filename = ''
 data = pandas.DataFrame
+col = []
 
 gui = Tk()
 
@@ -31,7 +33,7 @@ topFrame.rowconfigure(0,weight=1)
 
 # Mo file explorer
 def importFileName():
-    global data
+    global data, filename
     filename = filedialog.askopenfilename(initialdir="/",
                                           title="Select a File",
                                           filetypes=(("Data files",
@@ -84,8 +86,6 @@ leftFrame.rowconfigure(0, weight=1)
 tableFrame = Frame(leftFrame)
 tableFrame.grid(row=0,column=0,sticky='news')
 
-s = ttk.Style(tableFrame)
-
 table = ttk.Treeview(tableFrame,show='headings')
 table.place(relx=0,rely=0,relheight=1,relwidth=1)
 # Tao scrollbar
@@ -102,34 +102,49 @@ table.config(yscrollcommand=table_scroll.set,xscrollcommand=table_scroll1.set)
 
 leftFrame.columnconfigure(0, weight=1)
 leftFrame.rowconfigure(0, weight=1)
+def delete_col(event):
+    region = table.identify_region(event.x,event.y)
+    if region == 'heading':
+        selected_col = table.identify_column(event.x)
+        col1 = table.column(selected_col).get('id')
+        data_col = data.columns.tolist()
 
+        if data_col[-1] != col1:
+            data_col.remove(col1)
+            data.drop(columns=col1,axis=1,inplace=True)
+            createDataTableUI(data)
+
+table.bind('<Button-3>',delete_col)
 # Hien thi data
 def createDataTableUI(data,trained = False):
-    col = data.columns.tolist()
+    if data.empty:
+        browseLabel.configure(text='Empty data')
+    else:
+        col = data.columns.tolist()
 
-    for i in table.get_children():
-        table.delete(i)
+        for i in table.get_children():
+            table.delete(i)
 
-    table.config(columns=col)
+        table.config(columns=col)
 
-    # Tao cot cua bang
-    for i in range(len(col)):
-        table.column(col[i],
-                     minwidth=100,
-                     width=100,
-                     anchor='e')
-        table.heading(col[i],text=col[i],anchor=CENTER)
+        # Tao cot cua bang
+        for i in range(len(col)):
+            table.column(col[i],
+                         minwidth=100,
+                         width=100,
+                         anchor='e')
+            table.heading(col[i],text=col[i],anchor=CENTER)
 
-    for row in data.itertuples(index= False):
-        # Gan tag 'wrong' cho nhung dong sai sau khi ap dung thuat toan
-        if trained and row[-1]!=row[-2]:
-            table.insert(parent='',index='end',values=row,tags='wrong')
-        else:
-            table.insert(parent='',index='end',values=row)
+        for row in data.itertuples(index= False):
+            # Gan tag 'wrong' cho nhung dong sai sau khi ap dung thuat toan
+            if trained and row[-1]!=row[-2]:
+                table.insert(parent='',index='end',values=row,tags='wrong')
+            else:
+                table.insert(parent='',index='end',values=row)
 
-    # Highlight dong co tag 'wrong'
-    if trained:
-        table.tag_configure('wrong',background='yellow')
+        # Highlight dong co tag 'wrong'
+        if trained:
+            table.tag_configure('wrong',background='yellow')
 
 #########################################
 # Frame de hien thi ket qua cua thuat toan
@@ -137,7 +152,13 @@ rightFrame = Frame(gui)
 rightFrame.grid(row=1,column=1,sticky=S+E+N+W,padx=5,pady=5)
 
 trainBtn = Button(rightFrame, text='Train', height=1, width=10, command = lambda:updateResult(data=data))
-trainBtn.pack(side='top',padx=5,pady=5)
+trainBtn.grid(row=0,column=0,padx = 5,pady = 5)
+
+restoreBtn = Button(rightFrame, text='Restore', height=1, width=10, command = lambda: restore())
+restoreBtn.grid(row=0,column=1,padx = 5,pady = 5)
+
+restoreBtn = Button(rightFrame, text='Delete', height=1, width=10, command = lambda:delete())
+restoreBtn.grid(row=0,column=2,padx = 5,pady = 5)
 
 resultLabel = Label(rightFrame,text='Result:',width=20,anchor=W)
 resultLabel.place(x=10,y=50)
@@ -156,6 +177,43 @@ weightLabel.place(x=10,y=210)
 
 weightLabel2 = Label(rightFrame,anchor=W)
 weightLabel2.place(x=10,y=240)
+# XOa item hay cot
+def delete():
+    if data.empty:
+        browseLabel.configure(text='Empty data')
+    else:
+        # Dua ra gia tri cua item duoc xoa
+        for item in table.selection():
+
+            item_value = table.item(item)['values']
+
+            col = data.columns.tolist()
+            # So sanh tung gia tri mot cua tung cot thuoc tinh
+            # de lay duoc index cua thuoc tinh can xoa
+            index_def = data[data[col[0]]==float(item_value[0])].index
+            for i in range(1,len(col)-1):
+                index_def = set(index_def).intersection(
+                    data[data[col[i]]==float(item_value[i])].index
+                )
+            # Xoa trong treeview
+            table.delete(item)
+
+            # Xoa trong data
+            data.drop(index=index_def,inplace=True)
+            data.reset_index(drop = True,inplace = True)
+
+# Quay tro lai data ban dau
+def restore():
+    global data
+    if filename[-5:] == ".xlsx":
+        data = pandas.read_excel(filename)
+        createDataTableUI(data)
+    elif filename[-4:] == ".csv":
+        data = pandas.read_csv(filename)
+        createDataTableUI(data)
+    else:
+        browseLabel.configure(text="Not a correct data file")
+    createDataTableUI(data)
 # Hien thi ket qua
 def updateResult(data):
 
@@ -177,4 +235,4 @@ def updateResult(data):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    gui.mainloop();
+    gui.mainloop()
