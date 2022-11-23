@@ -1,7 +1,7 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 from tkinter import *
-from tkinter import filedialog,ttk
+from tkinter import filedialog, ttk
 import pandas
 import test
 
@@ -18,18 +18,18 @@ gui.geometry("%dx%d+%d+%d" % (screen_width/2, screen_height/2, screen_width/4, s
 gui.title('Project1GUI')
 gui.configure(background="#A5A8EC")
 
-gui.columnconfigure(0,weight=4)
-gui.columnconfigure(1,weight=1)
-gui.rowconfigure(1,weight=1)
+gui.columnconfigure(0, weight=4)
+gui.columnconfigure(1, weight=1)
+gui.rowconfigure(1, weight=1)
 
 ####################################
 # Frame de thuc hien import file data
-topFrame = Frame(gui,background="#25FFE3")
-topFrame.grid(row = 0,column=0,
+topFrame = Frame(gui, background="#25FFE3")
+topFrame.grid(row=0, column=0,
               columnspan=2,
-              sticky= N+W+E)
-topFrame.columnconfigure(1,weight=1)
-topFrame.rowconfigure(0,weight=1)
+              sticky=N+W+E)
+topFrame.columnconfigure(1, weight=1)
+topFrame.rowconfigure(0, weight=1)
 
 # Mo file explorer
 def importFileName():
@@ -40,7 +40,7 @@ def importFileName():
                                                       ["*.xlsx","*.csv"]),
                                                      ("all files",
                                                       "*.*")))
-    if filename[-5:]==".xlsx":
+    if filename[-5:] == ".xlsx":
         browseLabel.configure(text="File: " + filename)
         data = pandas.read_excel(filename)
         createDataTableUI(data)
@@ -102,19 +102,37 @@ table.config(yscrollcommand=table_scroll.set,xscrollcommand=table_scroll1.set)
 
 leftFrame.columnconfigure(0, weight=1)
 leftFrame.rowconfigure(0, weight=1)
-def delete_col(event):
+
+# Tao menu cho chuot phai
+table_menu = Menu(leftFrame,tearoff=0)
+table_selected_col = ''
+table_menu.add_command(label='Delete Column',
+                       command=lambda: delete_col(table_selected_col))
+# Hien thi menu (Xoa) o phan heading ma khong phai nhan
+def popup(event):
+    global table_selected_col
+
     region = table.identify_region(event.x,event.y)
     if region == 'heading':
-        selected_col = table.identify_column(event.x)
-        col1 = table.column(selected_col).get('id')
+        selected_col1 = table.identify_column(event.x)
+        col1 = table.column(selected_col1).get('id')
         data_col = data.columns.tolist()
 
         if data_col[-1] != col1:
-            data_col.remove(col1)
-            data.drop(columns=col1,axis=1,inplace=True)
-            createDataTableUI(data)
+            try:
+                table_menu.tk_popup(event.x_root,event.y_root)
+                table_selected_col = col1
+            finally:
+                table_menu.grab_release()
 
-table.bind('<Button-3>',delete_col)
+# Thuc hien xoa
+def delete_col(col1):
+    data.drop(columns=col1, axis=1, inplace=True)
+    createDataTableUI(data)
+
+# Bind phan popup vao nut chuot trai
+table.bind('<Button-3>', popup)
+
 # Hien thi data
 def createDataTableUI(data,trained = False):
     if data.empty:
