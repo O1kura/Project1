@@ -1,20 +1,13 @@
+import time
 import pandas as pd
 import numpy as np
+from pandas.core.arrays import ExtensionArray
 
-def upload_file(dfData):
-    # file = filedialog.askopenfilename()
 
-    # dfData = pd.read_csv(file)
-    # dfData = pd.read_csv(file)
-    print(dfData)
-
-    # import file dữ liệu xong
-
+def upload_file(dfData,method):
     # tao File Dai Dien Lop
-
+    st = time.time()
     listColumns = dfData.columns.to_list()
-
-    print(listColumns)
 
     dfDataTB = pd.DataFrame()
 
@@ -25,9 +18,8 @@ def upload_file(dfData):
 
     columnsLabelName = listColumns[len(listColumns) - 1]
 
-    print(dfData[columnsLabelName].unique().tolist())
-
     listLabel = dfData[columnsLabelName].unique().tolist()
+
     for i in range(len(listLabel)):
         for j in range(len(listColumns)):
             label = listLabel[i]
@@ -49,11 +41,6 @@ def upload_file(dfData):
 
     attribute = dfData.columns.drop([dfData.columns[len(dfData.columns) - 1]])
     df = dfData[attribute]
-
-    print("----------------")
-    print(attribute)
-    print(df)
-    print("----------------")
 
     # Mờ hóa dữ liệu: chuyển aij
     # thành (yij , nij) (if, non_if)
@@ -85,7 +72,7 @@ def upload_file(dfData):
     for i in range(len(attribute)):
         w.append(1 / (len(attribute)))
     w0 = w
-    w0
+
     # Tính weitgh có đk dừng dùng cho bài toán classification (dừng khi weight ko đổi)
     dw = dt * w0
     d1 = dw.sum(axis=0) / (len(dt))
@@ -106,7 +93,7 @@ def upload_file(dfData):
     print("w* :")
     print(w)
 
-    w_train = pd.Series(w, name="w_train").array
+    w_train: ExtensionArray = pd.Series(w, name="w_train").array
     w_trainToCsv = pd.DataFrame()
     w_trainToCsv = pd.concat([w_trainToCsv, pd.Series(w, name="w_train")], axis=1)
     w_trainToCsv.to_csv('w_train.csv', index=False)
@@ -133,11 +120,36 @@ def upload_file(dfData):
     ghep = pd.DataFrame()  # DataFrame chứa khoảng cách từ mỗi đối tượng đến các lớp và kết luận đối tượng đó thuộc lớp nào
     for i in range(0, len(T_test)):
         # Tính khoảng cách đến lớp
-        ti = T_test.loc[i]
-        di = w_train * abs(Syn - ti)
+        if method == 'Hamming distance(2)':
+            ti1 = IF_tesT.loc[i]
+            ti2 = IF_non_Test.loc[i]
+            di = w_train * (abs(IF_mem - ti1)+abs(IF_non_mem - ti2))/2
+        elif method == 'Mahanta distance':
+            ti1 = IF_tesT.loc[i]
+            ti2 = IF_non_Test.loc[i]
+            di = w_train * ((abs(IF_mem - ti1)+abs(IF_non_mem - ti2))/(IF_mem + ti1 + IF_non_mem + ti2))
+        elif method == 'Hamming distance(3)':
+            ti1 = IF_tesT.loc[i]
+            ti2 = IF_non_Test.loc[i]
+            di = w_train * (abs(IF_mem - ti1) + abs(IF_non_mem - ti2) + abs(IF_non_mem + IF_mem - ti1 - ti2)) / 2
+        elif method == 'Ngan distance':
+            ti1 = IF_tesT.loc[i]
+            ti2 = IF_non_Test.loc[i]
+
+            def maxRow(data,series):
+                for att in attribute:
+                    data.loc[data[att]<series[att],att]=series[att]
+                return data
+
+            dd1 = (abs(IF_mem - ti1)+abs(IF_non_mem - ti2))/4
+            dd2 = abs(maxRow(IF_mem,ti2) - maxRow(IF_non_mem,ti1))/2
+            di = w_train * (dd1+dd2)/3
+        else:
+            ti = T_test.loc[i]
+            di = w_train * abs(Syn - ti)
         d_i = di.sum(axis=1)
         d_i = pd.Series(d_i, name=lbl[i])
-        print(d_i)
+
         ghep = pd.concat([ghep, d_i], axis=1)
 
     # Mảng Chỉ số của kết quả phân lớp
@@ -152,7 +164,10 @@ def upload_file(dfData):
 
     ghep = pd.concat([ghep, pd.Series(conclusion, name="Ket Luan")], axis=1)
     ghep = ghep.round(decimals=3)
-    print(ghep)
+
+    et = time.time()
+    final_res = round((et-st)*1000,4)
+
     ghep.to_csv('ket_qua.csv', index=False)
     d_Class = dfData[dfData.columns[len(dfData.columns) - 1]]
     index_Class = []
@@ -163,28 +178,18 @@ def upload_file(dfData):
 
     dem = 0
     test_value = []
-    # print("a",len(index_Class))
+
     for k in range(len(index_Class)):
         if index_Class[k] == index_ghep[k]:
             dem = dem + 1
             test_value.append(1)
         else:
             test_value.append(0)
-    print("Ket qua:")
-    print('dự đoán đúng', dem)
-    print(len(d_Class))
+
     chinhxac = round(dem / len(d_Class), 2) * 100
-    print('độ chính xác', chinhxac)
-    # string1 = 'Result : '
     string2 = 'Correct Prediction : ' + str(dem)
     string3 = 'Accuracy : ' + str(chinhxac) + '%'
-    string = 'Size of data : ' + str(len(dfData))
-    # file_name.set(file)
-    # my_str.set(string)
-    # my_str1.set(string1)
-    # my_str2.set(string2)
-    # my_str3.set(string3)
+    string1 = 'Size of data : ' + str(len(dfData))
+    string4 = 'Time: '+ str(final_res) + ' milliseconds'
 
-    return (string2,string3,string,w,conclusion)
-
-# my_w.mainloop()  # Keep the window open
+    return (string2,string3,string1,w,conclusion,string4)
