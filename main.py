@@ -1,5 +1,6 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import tkinter.font
 from tkinter import *
 from tkinter import filedialog, ttk
 import pandas
@@ -19,7 +20,7 @@ gui.title('Project1GUI')
 gui.configure(background="#A5A8EC")
 
 gui.columnconfigure(0, weight=4)
-gui.columnconfigure(1, weight=1)
+#gui.columnconfigure(1, weight=1)
 gui.rowconfigure(1, weight=1)
 
 ####################################
@@ -166,35 +167,54 @@ def createDataTableUI(data,trained = False):
 
 #########################################
 # Frame de hien thi ket qua cua thuat toan
+# Cac nut chuc nang
 rightFrame = Frame(gui)
 rightFrame.grid(row=1,column=1,sticky=S+E+N+W,padx=5,pady=5)
 
 trainBtn = Button(rightFrame, text='Train', height=1, width=10, command = lambda:updateResult(data=data))
-trainBtn.grid(row=0,column=0,padx = 5,pady = 5)
+trainBtn.grid(row=1,column=0,padx = 5,pady = 5)
+
 
 restoreBtn = Button(rightFrame, text='Restore', height=1, width=10, command = lambda: restore())
-restoreBtn.grid(row=0,column=1,padx = 5,pady = 5)
+restoreBtn.grid(row=1,column=2,padx = 5,pady = 5)
+
 
 restoreBtn = Button(rightFrame, text='Delete', height=1, width=10, command = lambda:delete())
-restoreBtn.grid(row=0,column=2,padx = 5,pady = 5)
+restoreBtn.grid(row=1,column=1,padx = 5,pady = 5)
 
-resultLabel = Label(rightFrame,text='Result:',width=20,anchor=W)
-resultLabel.place(x=10,y=50)
+distance_label = Label(rightFrame,text='Measure:')
+distance_label.grid(row=0,column=0,pady=5,padx=5)
+
+# OptionMenu cho viec thay doi do do
+distance_list = ['Euler distance','Hamming distance(2)','Hamming distance(3)','Ngan distance','Mahanta distance']
+distance_method = StringVar(rightFrame)
+distance_method.set('Euler distance')
+
+distance_menu = OptionMenu(rightFrame,distance_method,*distance_list)
+distance_menu.grid(row=0,column=1,pady=5,padx=5,columnspan=2,sticky=E+W)
+
+# Cac label hien thi ket qua
+resultLabel = Label(rightFrame,text='Result',width=20,anchor='center',borderwidth=1,relief='solid')
+resultLabel.grid(row=2,column=0,columnspan=3,padx=5,pady=5,sticky=E+W)
 
 numberLabel = Label(rightFrame,text='Data size: ',width=20,anchor=W)
-numberLabel.place(x=10,y=90)
+numberLabel.grid(row=3,column=0,columnspan=3,padx=5,pady=5,sticky=E+W)
 
 correctLabel = Label(rightFrame,text='Correct Prediction: ',width=20,anchor=W)
-correctLabel.place(x=10 ,y = 130)
+correctLabel.grid(row=4,column=0,columnspan=3,padx=5,pady=5,sticky=E+W)
 
 accuracyLabel = Label(rightFrame,text='Accuracy: ',width=20,anchor=W)
-accuracyLabel.place(x=10,y=170)
+accuracyLabel.grid(row=5,column=0,columnspan=3,padx=5,pady=5,sticky=E+W)
+
+timeLabel = Label(rightFrame,text='Time executed: ',width=20,anchor=W)
+timeLabel.grid(row=6,column=0,columnspan=3,padx=5,pady=5,sticky=E+W)
 
 weightLabel = Label(rightFrame,text='Weight: ',width=20,anchor=W)
-weightLabel.place(x=10,y=210)
+weightLabel.grid(row=7,column=0,columnspan=3,padx=5,pady=5,sticky=E+W)
 
 weightLabel2 = Label(rightFrame,anchor=W)
-weightLabel2.place(x=10,y=240)
+weightLabel2.grid(row=8,column=0,columnspan=3,padx=5,pady=5,sticky=E+W+S)
+# Cac chuc nang
 # XOa item hay cot
 def delete():
     if data.empty:
@@ -238,11 +258,12 @@ def updateResult(data):
     if data.empty:
         browseLabel.configure(text='Empty data')
     else:
-        (str1,str2,str3,df,conclusion)=test.upload_file(data)
+        (str1,str2,str3,df,conclusion,time_str)=test.upload_file(data,distance_method.get())
 
         numberLabel.configure(text=str3)
         correctLabel.configure(text=str1)
         accuracyLabel.configure(text=str2)
+        timeLabel.configure(text=time_str)
 
         string1 = df.to_string(index=True)
         weightLabel2.configure(text=string1)
