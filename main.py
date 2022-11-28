@@ -1,54 +1,162 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-import tkinter.font
+
 from tkinter import *
 from tkinter import filedialog, ttk
+
+import tkinterdnd2
+from tkinterdnd2 import DND_FILES, TkinterDnD
+from pathlib import Path
 import pandas
 import test
 
-filename = ''
+filepath = ''
 data = pandas.DataFrame
 col = []
+path_map = {}
 
-gui = Tk()
+gui = tkinterdnd2.Tk()
 
 screen_width = gui.winfo_screenwidth()
 screen_height = gui.winfo_screenheight()
 
-gui.geometry("%dx%d+%d+%d" % (screen_width/2, screen_height/2, screen_width/4, screen_height/4))
+gui.geometry("%dx%d+%d+%d" % (screen_width*2/3, screen_height/2, screen_width/6, screen_height/4))
 gui.title('Project1GUI')
 gui.configure(background="#A5A8EC")
 
-gui.columnconfigure(0, weight=4)
-#gui.columnconfigure(1, weight=1)
+gui.columnconfigure(1, weight=4)
+gui.columnconfigure(0, weight=1)
 gui.rowconfigure(1, weight=1)
-
 ####################################
+# Frame cho drag va drop + danh sach file
+leftFrame = Frame(gui)
+leftFrame.grid(row=1,
+               column=0,
+               padx=5,
+               pady=5,
+               sticky=N+S+W+E)
+
+# Thuc hien keo tha vao frame
+def drop_inside_list_box(event):
+    file_paths = _parse_drop_files(event.data)
+    current_listbox_items = set(file_names_listbox.get(0, "end"))
+    for file_path in file_paths:
+        if file_path.endswith(".xlsx"):
+            path_object = Path(file_path)
+            file_name = path_object.name
+            if file_name not in current_listbox_items:
+                file_names_listbox.insert("end", file_name)
+                path_map[file_name] = file_path
+
+        if file_path.endswith(".csv"):
+            path_object = Path(file_path)
+            file_name = path_object.name
+            if file_name not in current_listbox_items:
+                file_names_listbox.insert("end", file_name)
+                path_map[file_name] = file_path
+
+# Hien thi file
+def _display_file(event):
+    global data, filepath
+    if file_names_listbox.curselection() != ():
+        file_name = file_names_listbox.get(file_names_listbox.curselection())
+        filepath = path_map[file_name]
+        if filepath.endswith(".xlsx"):
+            browseLabel.configure(text="File: " + filepath)
+            data = pandas.read_excel(filepath)
+        elif filepath.endswith(".csv"):
+            browseLabel.configure(text="File: " + filepath)
+            data = pandas.read_csv(filepath)
+        createDataTableUI(data)
+
+# phan tich duong dan file
+def _parse_drop_files(filename):
+    size = len(filename)
+    res = []  # list of file paths
+    name = ""
+    idx = 0
+    while idx < size:
+        if filename[idx] == "{":
+            j = idx + 1
+            while filename[j] != "}":
+                name += filename[j]
+                j += 1
+            res.append(name)
+            name = ""
+            idx = j
+        elif filename[idx] == " " and name != "":
+            res.append(name)
+            name = ""
+        elif filename[idx] != " ":
+            name += filename[idx]
+        idx += 1
+    if name != "":
+        res.append(name)
+    return res
+
+file_names_listbox = Listbox(leftFrame, selectmode=SINGLE)
+file_names_listbox.place(relheight=1, relwidth=1)
+file_names_listbox.drop_target_register(DND_FILES)
+file_names_listbox.dnd_bind("<<Drop>>", drop_inside_list_box)
+file_names_listbox.bind("<Double-1>", _display_file)
+
+###################################
 # Frame de thuc hien import file data
 topFrame = Frame(gui, background="#25FFE3")
 topFrame.grid(row=0, column=0,
-              columnspan=2,
+              columnspan=3,
               sticky=N+W+E)
 topFrame.columnconfigure(1, weight=1)
 topFrame.rowconfigure(0, weight=1)
 
 # Mo file explorer
 def importFileName():
-    global data, filename
-    filename = filedialog.askopenfilename(initialdir="/",
+    global data, filepath
+    filepath = filedialog.askopenfilename(initialdir="/",
                                           title="Select a File",
                                           filetypes=(("Data files",
                                                       ["*.xlsx","*.csv"]),
                                                      ("all files",
                                                       "*.*")))
-    if filename[-5:] == ".xlsx":
-        browseLabel.configure(text="File: " + filename)
-        data = pandas.read_excel(filename)
+
+    current_listbox_items = set(file_names_listbox.get(0, "end"))
+
+    if filepath[-5:] == ".xlsx":
+        browseLabel.configure(text="File: " + filepath)
+        data = pandas.read_excel(filepath)
+        path_object = Path(filepath)
+        file_name = path_object.name
+        file_names_listbox.select_clear(0,'end')
+        if file_name not in current_listbox_items:
+            file_names_listbox.insert("end", file_name)
+            file_names_listbox.selection_set('end')
+            file_names_listbox.activate('end')
+            path_map[file_name] = filepath
+        else:
+            index = list(path_map).index(file_name)
+            file_names_listbox.selection_set(index)
+            file_names_listbox.activate(index)
+            file_names_listbox.see(index)
+            file_names_listbox.selection_anchor(index)
         createDataTableUI(data)
 
-    elif filename[-4:] == ".csv":
-        browseLabel.configure(text="File: " + filename)
-        data = pandas.read_csv(filename)
+    elif filepath[-4:] == ".csv":
+        browseLabel.configure(text="File: " + filepath)
+        data = pandas.read_csv(filepath)
+        path_object = Path(filepath)
+        file_name = path_object.name
+        file_names_listbox.select_clear(0, 'end')
+        if file_name not in current_listbox_items:
+            file_names_listbox.insert("end", file_name)
+            file_names_listbox.selection_set('end')
+            file_names_listbox.activate('end')
+            path_map[file_name] = filepath
+        else:
+            index = list(path_map).index(file_name)
+            file_names_listbox.selection_set(index)
+            file_names_listbox.activate(index)
+            file_names_listbox.see(index)
+            file_names_listbox.selection_anchor(index)
         createDataTableUI(data)
     else:
         browseLabel.configure(text="Not a correct data file")
@@ -64,7 +172,6 @@ browseBtn.grid(column=0,
 browseLabel = Label(topFrame)
 browseLabel.grid(column=1,
                  row=0,
-                 #rowspan=2,
                  padx=5,
                  pady=5,
                  ipady=2,
@@ -74,26 +181,26 @@ browseLabel.grid(column=1,
 
 ##################################
 # Frame de hien thi Du lieu dau vao
-leftFrame = Frame(gui)
-leftFrame.grid(row=1,
-               column=0,
-               padx=5,
-               pady=5,
-               sticky=N+S+W+E
-               )
-leftFrame.columnconfigure(0, weight=1)
-leftFrame.rowconfigure(0, weight=1)
+MiddleFrame = Frame(gui)
+MiddleFrame.grid(row=1,
+                 column=1,
+                 padx=5,
+                 pady=5,
+                 sticky=N+S+W+E
+                 )
+MiddleFrame.columnconfigure(0, weight=1)
+MiddleFrame.rowconfigure(0, weight=1)
 
-tableFrame = Frame(leftFrame)
+tableFrame = Frame(MiddleFrame)
 tableFrame.grid(row=0,column=0,sticky='news')
 
 table = ttk.Treeview(tableFrame,show='headings')
 table.place(relx=0,rely=0,relheight=1,relwidth=1)
 # Tao scrollbar
-table_scroll = Scrollbar(leftFrame)
+table_scroll = Scrollbar(MiddleFrame)
 table_scroll.grid(row=0,column=1,sticky=N+S)
 
-table_scroll1 = Scrollbar(leftFrame,orient="horizontal")
+table_scroll1 = Scrollbar(MiddleFrame, orient="horizontal")
 table_scroll1.grid(row=1,column=0,sticky=W+E)
 
 table_scroll.config(command=table.yview)
@@ -101,11 +208,11 @@ table_scroll1.config(command=table.xview)
 
 table.config(yscrollcommand=table_scroll.set,xscrollcommand=table_scroll1.set)
 
-leftFrame.columnconfigure(0, weight=1)
-leftFrame.rowconfigure(0, weight=1)
+MiddleFrame.columnconfigure(0, weight=1)
+MiddleFrame.rowconfigure(0, weight=1)
 
 # Tao menu cho chuot phai
-table_menu = Menu(leftFrame,tearoff=0)
+table_menu = Menu(MiddleFrame, tearoff=0)
 table_selected_col = ''
 table_menu.add_command(label='Delete Column',
                        command=lambda: delete_col(table_selected_col))
@@ -169,17 +276,15 @@ def createDataTableUI(data,trained = False):
 # Frame de hien thi ket qua cua thuat toan
 # Cac nut chuc nang
 rightFrame = Frame(gui)
-rightFrame.grid(row=1,column=1,sticky=S+E+N+W,padx=5,pady=5)
+rightFrame.grid(row=1,column=2,sticky=S+E+N+W,padx=5,pady=5)
 
-trainBtn = Button(rightFrame, text='Train', height=1, width=10, command = lambda:updateResult(data=data))
+trainBtn = Button(rightFrame, text='Train', height=1, width=8, command = lambda:updateResult(data=data))
 trainBtn.grid(row=1,column=0,padx = 5,pady = 5)
 
-
-restoreBtn = Button(rightFrame, text='Restore', height=1, width=10, command = lambda: restore())
+restoreBtn = Button(rightFrame, text='Restore', height=1, width=8, command = lambda: restore())
 restoreBtn.grid(row=1,column=2,padx = 5,pady = 5)
 
-
-restoreBtn = Button(rightFrame, text='Delete', height=1, width=10, command = lambda:delete())
+restoreBtn = Button(rightFrame, text='Delete', height=1, width=8, command = lambda:delete())
 restoreBtn.grid(row=1,column=1,padx = 5,pady = 5)
 
 distance_label = Label(rightFrame,text='Measure:')
@@ -243,18 +348,17 @@ def delete():
 # Quay tro lai data ban dau
 def restore():
     global data
-    if filename[-5:] == ".xlsx":
-        data = pandas.read_excel(filename)
+    if filepath[-5:] == ".xlsx":
+        data = pandas.read_excel(filepath)
         createDataTableUI(data)
-    elif filename[-4:] == ".csv":
-        data = pandas.read_csv(filename)
+    elif filepath[-4:] == ".csv":
+        data = pandas.read_csv(filepath)
         createDataTableUI(data)
     else:
         browseLabel.configure(text="Not a correct data file")
     createDataTableUI(data)
 # Hien thi ket qua
 def updateResult(data):
-
     if data.empty:
         browseLabel.configure(text='Empty data')
     else:
