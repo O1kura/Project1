@@ -1,4 +1,4 @@
-# Press Shift+F10 to execute it or replace it with your code.
+createDataTableUI(data)# Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 
 from tkinter import *
@@ -24,7 +24,7 @@ gui.geometry("%dx%d+%d+%d" % (screen_width*2/3, screen_height/2, screen_width/6,
 gui.title('Project1GUI')
 gui.configure(background="#A5A8EC")
 
-gui.columnconfigure(1, weight=4)
+gui.columnconfigure(1, weight=7)
 gui.columnconfigure(0, weight=1)
 gui.rowconfigure(1, weight=1)
 ####################################
@@ -95,10 +95,17 @@ def _parse_drop_files(filename):
     return res
 
 file_names_listbox = Listbox(leftFrame, selectmode=SINGLE)
-file_names_listbox.place(relheight=1, relwidth=1)
+# file_names_listbox.place(relheight=1, relwidth=1)
+file_names_listbox.grid(row=1,sticky=N+E+S+W)
 file_names_listbox.drop_target_register(DND_FILES)
 file_names_listbox.dnd_bind("<<Drop>>", drop_inside_list_box)
 file_names_listbox.bind("<Double-1>", _display_file)
+
+label1 = Label(leftFrame,text='Files',anchor='w')
+label1.grid(row=0, sticky=S+W+E)
+
+leftFrame.rowconfigure(1,weight=1)
+leftFrame.columnconfigure(0,weight=1)
 
 ###################################
 # Frame de thuc hien import file data
@@ -297,6 +304,7 @@ distance_method.set('Euler distance')
 
 distance_menu = OptionMenu(rightFrame,distance_method,*distance_list)
 distance_menu.grid(row=0,column=1,pady=5,padx=5,columnspan=2,sticky=E+W)
+distance_menu.configure(width=18,anchor='w')
 
 # Cac label hien thi ket qua
 resultLabel = Label(rightFrame,text='Result',width=20,anchor='center',borderwidth=1,relief='solid')
@@ -320,7 +328,7 @@ weightLabel.grid(row=7,column=0,columnspan=3,padx=5,pady=5,sticky=E+W)
 weightLabel2 = Label(rightFrame,anchor=W)
 weightLabel2.grid(row=8,column=0,columnspan=3,padx=5,pady=5,sticky=E+W+S)
 # Cac chuc nang
-# XOa item hay cot
+# XOa item
 def delete():
     if data.empty:
         browseLabel.configure(text='Empty data')
@@ -333,10 +341,18 @@ def delete():
             col = data.columns.tolist()
             # So sanh tung gia tri mot cua tung cot thuoc tinh
             # de lay duoc index cua thuoc tinh can xoa
-            index_def = data[data[col[0]]==float(item_value[0])].index
+
+            def is_float(element: any):
+                try:
+                    float(element)
+                    return float(element)
+                except ValueError:
+                    return element
+
+            index_def = data[data[col[0]] == is_float(item_value[0])].index
             for i in range(1,len(col)-1):
                 index_def = set(index_def).intersection(
-                    data[data[col[i]]==float(item_value[i])].index
+                    data[data[col[i]] == is_float(item_value[i])].index
                 )
             # Xoa trong treeview
             table.delete(item)
@@ -354,9 +370,7 @@ def restore():
     elif filepath[-4:] == ".csv":
         data = pandas.read_csv(filepath)
         createDataTableUI(data)
-    else:
-        browseLabel.configure(text="Not a correct data file")
-    createDataTableUI(data)
+
 # Hien thi ket qua
 def updateResult(data):
     if data.empty:
