@@ -1,9 +1,10 @@
 # Press Shift+F10 to execute it or replace it with your code.
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import time
 import tkinter
 from tkinter import *
 from tkinter import filedialog, ttk
-
+import matplotlib.pyplot as plt
 import tkinterdnd2
 from tkinterdnd2 import DND_FILES
 import tkinter.scrolledtext as st
@@ -13,8 +14,8 @@ import test
 
 filepath = ''
 data = pandas.DataFrame
+# path_map = {"Train":"C:/Users/viet6/Downloads/Train_KAHRAMAN.csv"}
 path_map = {}
-
 gui = tkinterdnd2.Tk()
 
 screen_width = gui.winfo_screenwidth()
@@ -104,6 +105,7 @@ file_names_listbox.grid(row=1, sticky=N + E + S + W)
 file_names_listbox.drop_target_register(DND_FILES)
 file_names_listbox.dnd_bind("<<Drop>>", drop_inside_list_box)
 file_names_listbox.bind("<Double-1>", _display_file)
+# file_names_listbox.insert("end","Train")
 
 label1 = Label(leftFrame, text='Files', anchor='w', background='#C0C0C0', borderwidth=1, relief='solid')
 label1.grid(row=0, sticky=S + W + E)
@@ -399,23 +401,26 @@ def update_result(data1):
         browseLabel.configure(text='Empty data')
     else:
         try:
-            (str1, str2, str3, df, conclusion, time_str) = test.upload_file(data1, distance_method.get())
-
+            st = time.time()
+            (str1, str2, str3, df, conclusion) = test.upload_file(data1, distance_method.get())
+            et = time.time()
+            final_res = round((et - st) * 1000, 4)
             numberLabel.configure(text=str3)
             correctLabel.configure(text=str1)
             accuracyLabel.configure(text=str2)
-            timeLabel.configure(text=time_str)
+            timeLabel.configure(text=('Time:'+str(final_res)+' ms'))
 
             weightLabel1.configure(state='normal')
             weightLabel1.delete('1.0', tkinter.END)
-            string1 = df.to_string(index=True)
-            weightLabel1.insert(tkinter.INSERT, string1)
+            weight_str = df.to_string(index=True)
+            weightLabel1.insert(tkinter.INSERT, weight_str)
             weightLabel1.configure(state='disabled')
 
             data1 = pandas.concat([data1, pandas.Series(conclusion, name='Prediction')], axis=1)
             create_table(data1, True)
 
             browseLabel.configure(text='Trained')
+
         except TypeError:
             browseLabel.configure(text='Value Error (Numeric only)')
 
