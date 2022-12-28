@@ -421,7 +421,7 @@ def update_result(data1, weight=False):
         try:
             if weight:
                 attribute = data1.columns.drop([data1.columns[len(data1.columns) - 1]])
-                if calculated_weight.index.all() == attribute.all():
+                if not calculated_weight.empty and calculated_weight.index.all() == attribute.all():
                     start_time = time.time()
                     (str1, str2, str3, df, conclusion) = \
                         test.upload_file(data1, distance_method.get(), calculated_weight)
