@@ -3,7 +3,7 @@ import numpy as np
 from pandas.core.arrays import ExtensionArray
 
 
-def upload_file(dfData, method):
+def upload_file(dfData, method, pre_weight=None):
     # tao File Dai Dien Lop
     listColumns = dfData.columns.to_list()
 
@@ -65,30 +65,36 @@ def upload_file(dfData, method):
 
     # Weight ban đầu cho bài toán phân lớp
     w_history = []
-    w0 = []
-    # print('Tinh weigt:')
-    for i in range(len(attribute)):
-        w0.append(1 / (len(attribute)))
-    w = pd.Series(w0, index=attribute)
-    w_history.append(w)
 
-    # Tính weitgh có đk dừng dùng cho bài toán classification (dừng khi weight ko đổi)
-    dw = dt * w
-    d1 = dw.sum(axis=0) / (len(dt))
+    if pre_weight is None:
+        w0 = []
 
-    # print(d1)
-    w1 = round(d1 / d1.sum(axis=0), 4)
-    tw = w1 - w
-    tw1 = abs(tw.min(axis=0))
+        # print('Tinh weigt:')
+        for i in range(len(attribute)):
+            w0.append(1 / (len(attribute)))
+        w = round(pd.Series(w0, index=attribute), 4)
+        w_history.append(w)
 
-    while tw1 != 0:
-        d = dt * w1
-        d1 = d.sum(axis=0) / (len(dt))
+        # Tính weitgh có đk dừng dùng cho bài toán classification (dừng khi weight ko đổi)
+        dw = dt * w
+        d1 = dw.sum(axis=0) / (len(dt))
+
+        # print(d1)
         w1 = round(d1 / d1.sum(axis=0), 4)
         tw = w1 - w
-        w = w1
-        w_history.append(w)
         tw1 = abs(tw.min(axis=0))
+
+        while tw1 != 0:
+            d = dt * w1
+            d1 = d.sum(axis=0) / (len(dt))
+            w1 = round(d1 / d1.sum(axis=0), 4)
+            tw = w1 - w
+            w = w1
+            w_history.append(w)
+            tw1 = abs(tw.min(axis=0))
+    else:
+        w = pd.Series(pre_weight, index=attribute)
+        w_history.append(w)
 
     # Chạy dữ liệu train mới
     # Quá trình phân lớp
@@ -116,25 +122,136 @@ def upload_file(dfData, method):
     dem1 = 0
     accuracy_history = []  # Use for graphing later on
 
-    for w_i in w_history:
-        # DataFrame chứa khoảng cách từ mỗi đối tượng đến các lớp và kết luận đối tượng đó thuộc lớp nào
-        ghep = pd.DataFrame()
-        w_train: ExtensionArray = pd.Series(w_i, name="w_train").array
-        for i in range(0, len(T_test)):
-            # Tính khoảng cách đến lớp
-            if method == 'Hamming distance(2)':
+    if method == 'Hamming distance(2)':
+        for w_i in w_history:
+            # DataFrame chứa khoảng cách từ mỗi đối tượng đến các lớp và kết luận đối tượng đó thuộc lớp nào
+            ghep = pd.DataFrame()
+            w_train: ExtensionArray = pd.Series(w_i, name="w_train").array
+            for i in range(0, len(T_test)):
                 ti1 = IF_tesT.loc[i]
                 ti2 = IF_non_Test.loc[i]
-                di = w_train * (abs(IF_mem - ti1)+abs(IF_non_mem - ti2))/2
-            elif method == 'Mahanta distance':
+                di = w_train * (abs(IF_mem - ti1) + abs(IF_non_mem - ti2)) / 2
+
+                d_i = di.sum(axis=1)
+                d_i = pd.Series(d_i, name=lbl[i])
+
+                ghep = pd.concat([ghep, d_i], axis=1)
+            # Mảng Chỉ số của kết quả phân lớp
+
+            index_ghep = np.argmin(np.asarray(ghep.loc[:]), axis=1)
+
+            d_Class = dfData[dfData.columns[len(dfData.columns) - 1]]
+            index_Class = []
+            index_d_Class = np.asarray(d_Class)
+
+            for i in index_d_Class:
+                index_Class.append(lbl.index(i))
+
+            dem = 0
+
+            for k in range(len(index_Class)):
+                if index_Class[k] == index_ghep[k]:
+                    dem = dem + 1
+
+            chinhxac_train = round(dem / len(d_Class), 2) * 100
+            accuracy_history.append(chinhxac_train)
+            if chinhxac_train >= chinhxac:
+                chinhxac = chinhxac_train
+                ghep1 = ghep
+                index_ghep1 = index_ghep
+                dem1 = dem
+                w = w_i
+            else:
+                break
+    elif method == 'Mahanta distance':
+        for w_i in w_history:
+            # DataFrame chứa khoảng cách từ mỗi đối tượng đến các lớp và kết luận đối tượng đó thuộc lớp nào
+            ghep = pd.DataFrame()
+            w_train: ExtensionArray = pd.Series(w_i, name="w_train").array
+            for i in range(0, len(T_test)):
                 ti1 = IF_tesT.loc[i]
                 ti2 = IF_non_Test.loc[i]
-                di = w_train * ((abs(IF_mem - ti1)+abs(IF_non_mem - ti2))/(IF_mem + ti1 + IF_non_mem + ti2))
-            elif method == 'Hamming distance(3)':
+                di = w_train * ((abs(IF_mem - ti1) + abs(IF_non_mem - ti2)) / (IF_mem + ti1 + IF_non_mem + ti2))
+
+                d_i = di.sum(axis=1)
+                d_i = pd.Series(d_i, name=lbl[i])
+
+                ghep = pd.concat([ghep, d_i], axis=1)
+
+            # Mảng Chỉ số của kết quả phân lớp
+
+            index_ghep = np.argmin(np.asarray(ghep.loc[:]), axis=1)
+
+            d_Class = dfData[dfData.columns[len(dfData.columns) - 1]]
+            index_Class = []
+            index_d_Class = np.asarray(d_Class)
+
+            for i in index_d_Class:
+                index_Class.append(lbl.index(i))
+
+            dem = 0
+
+            for k in range(len(index_Class)):
+                if index_Class[k] == index_ghep[k]:
+                    dem = dem + 1
+
+            chinhxac_train = round(dem / len(d_Class), 2) * 100
+            accuracy_history.append(chinhxac_train)
+            if chinhxac_train >= chinhxac:
+                chinhxac = chinhxac_train
+                ghep1 = ghep
+                index_ghep1 = index_ghep
+                dem1 = dem
+                w = w_i
+            else:
+                break
+    elif method == 'Hamming distance(3)':
+        for w_i in w_history:
+            # DataFrame chứa khoảng cách từ mỗi đối tượng đến các lớp và kết luận đối tượng đó thuộc lớp nào
+            ghep = pd.DataFrame()
+            w_train: ExtensionArray = pd.Series(w_i, name="w_train").array
+            for i in range(0, len(T_test)):
                 ti1 = IF_tesT.loc[i]
                 ti2 = IF_non_Test.loc[i]
                 di = w_train * (abs(IF_mem - ti1) + abs(IF_non_mem - ti2) + abs(IF_non_mem + IF_mem - ti1 - ti2)) / 2
-            elif method == 'Ngan distance':
+
+                d_i = di.sum(axis=1)
+                d_i = pd.Series(d_i, name=lbl[i])
+
+                ghep = pd.concat([ghep, d_i], axis=1)
+            # Mảng Chỉ số của kết quả phân lớp
+
+            index_ghep = np.argmin(np.asarray(ghep.loc[:]), axis=1)
+
+            d_Class = dfData[dfData.columns[len(dfData.columns) - 1]]
+            index_Class = []
+            index_d_Class = np.asarray(d_Class)
+
+            for i in index_d_Class:
+                index_Class.append(lbl.index(i))
+
+            dem = 0
+
+            for k in range(len(index_Class)):
+                if index_Class[k] == index_ghep[k]:
+                    dem = dem + 1
+
+            chinhxac_train = round(dem / len(d_Class), 2) * 100
+            accuracy_history.append(chinhxac_train)
+            if chinhxac_train >= chinhxac:
+                chinhxac = chinhxac_train
+                ghep1 = ghep
+                index_ghep1 = index_ghep
+                dem1 = dem
+                w = w_i
+            else:
+                break
+    elif method == 'Ngan distance':
+        for w_i in w_history:
+            # DataFrame chứa khoảng cách từ mỗi đối tượng đến các lớp và kết luận đối tượng đó thuộc lớp nào
+            ghep = pd.DataFrame()
+            w_train: ExtensionArray = pd.Series(w_i, name="w_train").array
+            for i in range(0, len(T_test)):
                 ti1 = IF_tesT.loc[i]
                 ti2 = IF_non_Test.loc[i]
 
@@ -143,45 +260,83 @@ def upload_file(dfData, method):
                         data.loc[data[att] < series[att], att] = series[att]
                     return data
 
-                dd1 = (abs(IF_mem - ti1)+abs(IF_non_mem - ti2))/4
-                dd2 = abs(maxRow(IF_mem, ti2) - maxRow(IF_non_mem, ti1))/2
-                di = w_train * (dd1+dd2)/3
+                dd1 = (abs(IF_mem - ti1) + abs(IF_non_mem - ti2)) / 4
+                dd2 = abs(maxRow(IF_mem, ti2) - maxRow(IF_non_mem, ti1)) / 2
+                di = w_train * (dd1 + dd2) / 3
+
+                d_i = di.sum(axis=1)
+                d_i = pd.Series(d_i, name=lbl[i])
+
+                ghep = pd.concat([ghep, d_i], axis=1)
+            # Mảng Chỉ số của kết quả phân lớp
+
+            index_ghep = np.argmin(np.asarray(ghep.loc[:]), axis=1)
+
+            d_Class = dfData[dfData.columns[len(dfData.columns) - 1]]
+            index_Class = []
+            index_d_Class = np.asarray(d_Class)
+
+            for i in index_d_Class:
+                index_Class.append(lbl.index(i))
+
+            dem = 0
+
+            for k in range(len(index_Class)):
+                if index_Class[k] == index_ghep[k]:
+                    dem = dem + 1
+
+            chinhxac_train = round(dem / len(d_Class), 2) * 100
+            accuracy_history.append(chinhxac_train)
+            if chinhxac_train >= chinhxac:
+                chinhxac = chinhxac_train
+                ghep1 = ghep
+                index_ghep1 = index_ghep
+                dem1 = dem
+                w = w_i
             else:
+                break
+    else:
+        for w_i in w_history:
+            # DataFrame chứa khoảng cách từ mỗi đối tượng đến các lớp và kết luận đối tượng đó thuộc lớp nào
+            ghep = pd.DataFrame()
+            w_train: ExtensionArray = pd.Series(w_i, name="w_train").array
+            for i in range(0, len(T_test)):
                 ti = T_test.loc[i]
                 di = w_train * abs(Syn - ti)
-            d_i = di.sum(axis=1)
-            d_i = pd.Series(d_i, name=lbl[i])
 
-            ghep = pd.concat([ghep, d_i], axis=1)
+                d_i = di.sum(axis=1)
+                d_i = pd.Series(d_i, name=lbl[i])
 
-        # Mảng Chỉ số của kết quả phân lớp
+                ghep = pd.concat([ghep, d_i], axis=1)
 
-        index_ghep = np.argmin(np.asarray(ghep.loc[:]), axis=1)
+            # Mảng Chỉ số của kết quả phân lớp
 
-        d_Class = dfData[dfData.columns[len(dfData.columns) - 1]]
-        index_Class = []
-        index_d_Class = np.asarray(d_Class)
+            index_ghep = np.argmin(np.asarray(ghep.loc[:]), axis=1)
 
-        for i in index_d_Class:
-            index_Class.append(lbl.index(i))
+            d_Class = dfData[dfData.columns[len(dfData.columns) - 1]]
+            index_Class = []
+            index_d_Class = np.asarray(d_Class)
 
-        dem = 0
+            for i in index_d_Class:
+                index_Class.append(lbl.index(i))
 
-        for k in range(len(index_Class)):
-            if index_Class[k] == index_ghep[k]:
-                dem = dem + 1
+            dem = 0
 
-        chinhxac_train = round(dem / len(d_Class), 2) * 100
-        accuracy_history.append(chinhxac_train)
-        if chinhxac_train >= chinhxac:
-            chinhxac = chinhxac_train
-            ghep1 = ghep
-            index_ghep1 = index_ghep
-            dem1 = dem
-            w = w_i
-        # if the accuracy drops then break (optional)
-        else:
-            break
+            for k in range(len(index_Class)):
+                if index_Class[k] == index_ghep[k]:
+                    dem = dem + 1
+
+            chinhxac_train = round(dem / len(d_Class), 2) * 100
+            accuracy_history.append(chinhxac_train)
+            if chinhxac_train >= chinhxac:
+                chinhxac = chinhxac_train
+                ghep1 = ghep
+                index_ghep1 = index_ghep
+                dem1 = dem
+                w = w_i
+            # if the accuracy drops then break (optional)
+            else:
+                break
 
     w_trainToCsv = pd.DataFrame()
     w_trainToCsv = pd.concat([w_trainToCsv, pd.Series(w, name="w_train")], axis=1)
@@ -196,6 +351,7 @@ def upload_file(dfData, method):
     ghep = ghep.round(decimals=3)
 
     ghep.to_csv('ket_qua.csv', index=False)
+    print(accuracy_history)
 
     string1 = 'Correct Prediction : ' + str(dem1)
     string2 = 'Accuracy : ' + str(chinhxac) + '%'
