@@ -14,7 +14,8 @@ import test
 
 filepath = ''
 data = pandas.DataFrame
-# path_map = {"Train":"C:/Users/viet6/Downloads/Train_KAHRAMAN.csv"}
+calculated_weight = pandas.Series
+# path_map = {"Train": "C:/Users/viet6/Downloads/Train_KAHRAMAN.csv"}
 path_map = {}
 gui = tkinterdnd2.Tk()
 
@@ -105,7 +106,7 @@ file_names_listbox.grid(row=1, sticky=N + E + S + W)
 file_names_listbox.drop_target_register(DND_FILES)
 file_names_listbox.dnd_bind("<<Drop>>", drop_inside_list_box)
 file_names_listbox.bind("<Double-1>", _display_file)
-# file_names_listbox.insert("end","Train")
+# file_names_listbox.insert("end", "Train")
 
 label1 = Label(leftFrame, text='Files', anchor='w', background='#C0C0C0', borderwidth=1, relief='solid')
 label1.grid(row=0, sticky=S + W + E)
@@ -302,7 +303,7 @@ def create_table(data1, trained=False):
 # Cac nut chuc nang
 rightFrame = Frame(gui)
 rightFrame.grid(row=1, column=2, sticky=S + E + N + W, padx=5, pady=5)
-rightFrame.rowconfigure(8, weight=1)
+rightFrame.rowconfigure(9, weight=1)
 
 trainBtn = Button(rightFrame, text='Train', height=1, width=8, command=lambda: update_result(data1=data))
 trainBtn.grid(row=1, column=0, padx=5, pady=5)
@@ -312,6 +313,13 @@ restoreBtn.grid(row=1, column=2, padx=5, pady=5)
 
 restoreBtn = Button(rightFrame, text='Delete', height=1, width=8, command=lambda: delete())
 restoreBtn.grid(row=1, column=1, padx=5, pady=5)
+
+splitBtn = Button(rightFrame, text='Split', height=1, width=8, command=lambda: split())
+splitBtn.grid(row=2, column=1, padx=5, pady=5)
+
+use_weightBtn = Button(rightFrame, text='Use weight', height=1, width=8,
+                       command=lambda: update_result(data1=data, weight=True))
+use_weightBtn.grid(row=2, column=2, pady=5, padx=5)
 
 distance_label = Label(rightFrame, text='Measure:')
 distance_label.grid(row=0, column=0, pady=5, padx=5)
@@ -327,25 +335,25 @@ distance_menu.configure(width=18, anchor='w')
 
 # Cac label hien thi ket qua
 resultLabel = Label(rightFrame, text='Result', width=20, anchor='center', borderwidth=1, relief='solid')
-resultLabel.grid(row=2, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+resultLabel.grid(row=3, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
 
 numberLabel = Label(rightFrame, text='Data size: ', width=20, anchor=W)
-numberLabel.grid(row=3, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+numberLabel.grid(row=4, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
 
 correctLabel = Label(rightFrame, text='Correct Prediction: ', width=20, anchor=W)
-correctLabel.grid(row=4, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+correctLabel.grid(row=5, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
 
 accuracyLabel = Label(rightFrame, text='Accuracy: ', width=20, anchor=W)
-accuracyLabel.grid(row=5, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+accuracyLabel.grid(row=6, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
 
 timeLabel = Label(rightFrame, text='Time executed: ', width=20, anchor=W)
-timeLabel.grid(row=6, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+timeLabel.grid(row=7, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
 
 weightLabel = Label(rightFrame, text='Weight: ', width=20, anchor=W)
-weightLabel.grid(row=7, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+weightLabel.grid(row=8, column=0, columnspan=3, padx=5, pady=5, sticky=E + W + N)
 
 weightLabel1 = st.ScrolledText(rightFrame, width=20)
-weightLabel1.grid(row=8, column=0, columnspan=3, padx=5, pady=5, sticky=E + W + N + S)
+weightLabel1.grid(row=9, column=0, columnspan=3, padx=5, pady=5, sticky=E + W + N + S)
 
 
 # Cac chuc nang
@@ -395,31 +403,69 @@ def restore():
         create_table(data)
 
 
+# Chia data thanh 2 set de train va test
+def split():
+    # TODO
+    # Thuc hien chia data
+    # Them vao pathmap
+    # Them vao file_names_listbox
+    return 0
+
+
 # Hien thi ket qua
-def update_result(data1):
+def update_result(data1, weight=False):
     if data1.empty:
         browseLabel.configure(text='Empty data')
     else:
+        global calculated_weight
         try:
-            st = time.time()
-            (str1, str2, str3, df, conclusion) = test.upload_file(data1, distance_method.get())
-            et = time.time()
-            final_res = round((et - st) * 1000, 4)
-            numberLabel.configure(text=str3)
-            correctLabel.configure(text=str1)
-            accuracyLabel.configure(text=str2)
-            timeLabel.configure(text=('Time:'+str(final_res)+' ms'))
+            if weight:
+                attribute = data1.columns.drop([data1.columns[len(data1.columns) - 1]])
+                if calculated_weight.index.all() == attribute.all():
+                    start_time = time.time()
+                    (str1, str2, str3, df, conclusion) = \
+                        test.upload_file(data1, distance_method.get(), calculated_weight)
+                    et = time.time()
+                    calculated_weight = df
+                    final_res = round((et - start_time) * 1000, 4)
+                    numberLabel.configure(text=str3)
+                    correctLabel.configure(text=str1)
+                    accuracyLabel.configure(text=str2)
+                    timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
 
-            weightLabel1.configure(state='normal')
-            weightLabel1.delete('1.0', tkinter.END)
-            weight_str = df.to_string(index=True)
-            weightLabel1.insert(tkinter.INSERT, weight_str)
-            weightLabel1.configure(state='disabled')
+                    weightLabel1.configure(state='normal')
+                    weightLabel1.delete('1.0', tkinter.END)
+                    weight_str = df.to_string(index=True)
+                    weightLabel1.insert(tkinter.INSERT, weight_str)
+                    weightLabel1.configure(state='disabled')
 
-            data1 = pandas.concat([data1, pandas.Series(conclusion, name='Prediction')], axis=1)
-            create_table(data1, True)
+                    data1 = pandas.concat([data1, pandas.Series(conclusion, name='Prediction')], axis=1)
+                    create_table(data1, True)
 
-            browseLabel.configure(text='Trained')
+                    browseLabel.configure(text='Trained')
+                else:
+                    browseLabel.configure(text='Train model first')
+            else:
+                start_time = time.time()
+                (str1, str2, str3, df, conclusion) = test.upload_file(data1, distance_method.get())
+                et = time.time()
+                calculated_weight = df
+                final_res = round((et - start_time) * 1000, 4)
+                numberLabel.configure(text=str3)
+                correctLabel.configure(text=str1)
+                accuracyLabel.configure(text=str2)
+                timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
+
+                weightLabel1.configure(state='normal')
+                weightLabel1.delete('1.0', tkinter.END)
+                weight_str = df.to_string(index=True)
+                weightLabel1.insert(tkinter.INSERT, weight_str)
+                weightLabel1.configure(state='disabled')
+
+                data1 = pandas.concat([data1, pandas.Series(conclusion, name='Prediction')], axis=1)
+                create_table(data1, True)
+
+                browseLabel.configure(text='Trained')
 
         except TypeError:
             browseLabel.configure(text='Value Error (Numeric only)')
