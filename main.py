@@ -101,7 +101,6 @@ def _parse_drop_files(filename):
 
 
 file_names_listbox = Listbox(leftFrame, selectmode=SINGLE, relief='solid')
-# file_names_listbox.place(relheight=1, relwidth=1)
 file_names_listbox.grid(row=1, sticky=N + E + S + W)
 file_names_listbox.drop_target_register(DND_FILES)
 file_names_listbox.dnd_bind("<<Drop>>", drop_inside_list_box)
@@ -309,17 +308,21 @@ trainBtn = Button(rightFrame, text='Train', height=1, width=8, command=lambda: u
 trainBtn.grid(row=1, column=0, padx=5, pady=5)
 
 restoreBtn = Button(rightFrame, text='Restore', height=1, width=8, command=lambda: restore())
-restoreBtn.grid(row=1, column=2, padx=5, pady=5)
+restoreBtn.grid(row=2, column=1, padx=5, pady=5)
 
-restoreBtn = Button(rightFrame, text='Delete', height=1, width=8, command=lambda: delete())
-restoreBtn.grid(row=1, column=1, padx=5, pady=5)
+del_Btn = Button(rightFrame, text='Delete', height=1, width=8, command=lambda: delete())
+del_Btn.grid(row=2, column=0, padx=5, pady=5)
 
 splitBtn = Button(rightFrame, text='Split', height=1, width=8, command=lambda: split())
-splitBtn.grid(row=2, column=1, padx=5, pady=5)
+splitBtn.grid(row=1, column=1, padx=5, pady=5)
 
-use_weightBtn = Button(rightFrame, text='Use weight', height=1, width=8,
-                       command=lambda: update_result(data1=data, weight=True))
-use_weightBtn.grid(row=2, column=2, pady=5, padx=5)
+test_btn = Button(rightFrame, text='Test', height=1, width=8,
+                  command=lambda: update_result(data1=data, weight=True))
+test_btn.grid(row=1, column=2, pady=5, padx=5)
+
+detail_btn = Button(rightFrame, text='Details', height=1, width=8,
+                    command=lambda: graph_detail())
+detail_btn.grid(row=2, column=2, padx=5, pady=5)
 
 distance_label = Label(rightFrame, text='Measure:')
 distance_label.grid(row=0, column=0, pady=5, padx=5)
@@ -409,7 +412,15 @@ def split():
     # Thuc hien chia data
     # Them vao pathmap
     # Them vao file_names_listbox
-    return 0
+    return None
+
+
+# Hien thi chi tiet cac chi so
+def graph_detail():
+    # TODO
+    # Tao popup window
+    # Hien thi cac chi so can thiet
+    return None
 
 
 # Hien thi ket qua
