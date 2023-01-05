@@ -351,7 +351,7 @@ def upload_file(dfData, method, pre_weight=None):
     ghep = ghep.round(decimals=3)
 
     ghep.to_csv('ket_qua.csv', index=False)
-    print(accuracy_history)
+    # print(accuracy_history)
 
     string1 = 'Correct Prediction : ' + str(dem1)
     string2 = 'Accuracy : ' + str(chinhxac) + '%'
