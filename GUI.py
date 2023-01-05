@@ -2,15 +2,16 @@
 # Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
 import time
 import tkinter
+import shutil
 from tkinter import *
 from tkinter import filedialog, ttk
-import matplotlib.pyplot as plt
 import tkinterdnd2
 from tkinterdnd2 import DND_FILES
 import tkinter.scrolledtext as st
 from pathlib import Path
 import pandas
-import test
+import Algorithm
+import TrainAndTestSplitting
 
 filepath = ''
 data = pandas.DataFrame
@@ -29,6 +30,15 @@ gui.configure(background="#A5A8EC")
 gui.columnconfigure(1, weight=7)
 gui.columnconfigure(0, weight=1)
 gui.rowconfigure(1, weight=1)
+
+
+# TODO
+# Doc tat ca cac file tu folder cua project
+def read_folder():
+
+    return
+
+
 ####################################
 # Frame cho drag va drop + danh sach file
 leftFrame = Frame(gui)
@@ -47,6 +57,9 @@ def drop_inside_list_box(event):
         if file_path.endswith(".xlsx"):
             path_object = Path(file_path)
             file_name = path_object.name
+
+            shutil.copy(path_object, file_name)
+
             if file_name not in current_listbox_items:
                 file_names_listbox.insert("end", file_name)
                 path_map[file_name] = file_path
@@ -54,6 +67,9 @@ def drop_inside_list_box(event):
         if file_path.endswith(".csv"):
             path_object = Path(file_path)
             file_name = path_object.name
+
+            shutil.copy(path_object, file_name)
+
             if file_name not in current_listbox_items:
                 file_names_listbox.insert("end", file_name)
                 path_map[file_name] = file_path
@@ -141,6 +157,9 @@ def import_file():
         path_object = Path(filepath)
         file_name = path_object.name
         file_names_listbox.select_clear(0, 'end')
+
+        shutil.copy(filepath, file_name)
+
         if file_name not in current_listbox_items:
             file_names_listbox.insert("end", file_name)
             file_names_listbox.selection_set('end')
@@ -160,6 +179,9 @@ def import_file():
         path_object = Path(filepath)
         file_name = path_object.name
         file_names_listbox.select_clear(0, 'end')
+
+        shutil.copy(filepath, file_name)
+
         if file_name not in current_listbox_items:
             file_names_listbox.insert("end", file_name)
             file_names_listbox.selection_set('end')
@@ -408,11 +430,19 @@ def restore():
 
 # Chia data thanh 2 set de train va test
 def split():
-    # TODO
     # Thuc hien chia data
+    if file_names_listbox.curselection() != ():
+        file_name = file_names_listbox.get(file_names_listbox.curselection())
+        t = TrainAndTestSplitting.TrainAndTestSplitting(file_name)
+        split_list = t.trainAndTestSplitting(train_size=0.8, test_size=0.2, method="stratified")
     # Them vao pathmap
     # Them vao file_names_listbox
-    return None
+        current_listbox_items = set(file_names_listbox.get(0, "end"))
+        for file in split_list:
+            if file not in current_listbox_items:
+                path_map[file] = file
+                file_names_listbox.insert(file_names_listbox.curselection()[0]+1, file)
+        browseLabel.configure(text="Done splitting data")
 
 
 # Hien thi chi tiet cac chi so
@@ -432,10 +462,10 @@ def update_result(data1, weight=False):
         try:
             if weight:
                 attribute = data1.columns.drop([data1.columns[len(data1.columns) - 1]])
-                if not calculated_weight.empty and calculated_weight.index.all() == attribute.all():
+                if not calculated_weight.empty and calculated_weight.index.equals(attribute):
                     start_time = time.time()
                     (str1, str2, str3, df, conclusion) = \
-                        test.upload_file(data1, distance_method.get(), calculated_weight)
+                        Algorithm.upload_file(data1, distance_method.get(), calculated_weight)
                     et = time.time()
                     calculated_weight = df
                     final_res = round((et - start_time) * 1000, 4)
@@ -444,11 +474,11 @@ def update_result(data1, weight=False):
                     accuracyLabel.configure(text=str2)
                     timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
 
-                    weightLabel1.configure(state='normal')
-                    weightLabel1.delete('1.0', tkinter.END)
-                    weight_str = df.to_string(index=True)
-                    weightLabel1.insert(tkinter.INSERT, weight_str)
-                    weightLabel1.configure(state='disabled')
+                    # weightLabel1.configure(state='normal')
+                    # weightLabel1.delete('1.0', tkinter.END)
+                    # weight_str = df.to_string(index=True)
+                    # weightLabel1.insert(tkinter.INSERT, weight_str)
+                    # weightLabel1.configure(state='disabled')
 
                     data1 = pandas.concat([data1, pandas.Series(conclusion, name='Prediction')], axis=1)
                     create_table(data1, True)
@@ -458,7 +488,7 @@ def update_result(data1, weight=False):
                     browseLabel.configure(text='Train model first')
             else:
                 start_time = time.time()
-                (str1, str2, str3, df, conclusion) = test.upload_file(data1, distance_method.get())
+                (str1, str2, str3, df, conclusion) = Algorithm.upload_file(data1, distance_method.get())
                 et = time.time()
                 calculated_weight = df
                 final_res = round((et - start_time) * 1000, 4)
