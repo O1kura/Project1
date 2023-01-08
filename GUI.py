@@ -13,11 +13,9 @@ import pandas
 import Algorithm
 import TrainAndTestSplitting
 
-filepath = ''
 data = pandas.DataFrame
 calculated_weight = pandas.Series
-# path_map = {"Train": "C:/Users/viet6/Downloads/Train_KAHRAMAN.csv"}
-path_map = {}
+path_map = []
 gui = tkinterdnd2.Tk()
 
 screen_width = gui.winfo_screenwidth()
@@ -27,8 +25,7 @@ gui.geometry("%dx%d+%d+%d" % (screen_width * 2 / 3, screen_height / 2, screen_wi
 gui.title('Project1GUI')
 gui.configure(background="#A5A8EC")
 
-gui.columnconfigure(1, weight=7)
-gui.columnconfigure(0, weight=1)
+gui.columnconfigure(1, weight=1)
 gui.rowconfigure(1, weight=1)
 
 
@@ -62,7 +59,7 @@ def drop_inside_list_box(event):
 
             if file_name not in current_listbox_items:
                 file_names_listbox.insert("end", file_name)
-                path_map[file_name] = file_path
+                path_map.append(file_name)
 
         if file_path.endswith(".csv"):
             path_object = Path(file_path)
@@ -72,21 +69,20 @@ def drop_inside_list_box(event):
 
             if file_name not in current_listbox_items:
                 file_names_listbox.insert("end", file_name)
-                path_map[file_name] = file_path
+                path_map.append(file_name)
 
 
 # Hien thi file
 def _display_file(event):
-    global data, filepath
+    global data
     if file_names_listbox.curselection() != ():
         file_name = file_names_listbox.get(file_names_listbox.curselection())
-        filepath = path_map[file_name]
-        if filepath.endswith(".xlsx"):
-            browseLabel.configure(text="File: " + filepath)
-            data = pandas.read_excel(filepath)
-        elif filepath.endswith(".csv"):
-            browseLabel.configure(text="File: " + filepath)
-            data = pandas.read_csv(filepath)
+        if file_name.endswith(".xlsx"):
+            browseLabel.configure(text="File: " + file_name)
+            data = pandas.read_excel(file_name)
+        elif file_name.endswith(".csv"):
+            browseLabel.configure(text="File: " + file_name)
+            data = pandas.read_csv(file_name)
         create_table(data)
 
 
@@ -121,9 +117,8 @@ file_names_listbox.grid(row=1, sticky=N + E + S + W)
 file_names_listbox.drop_target_register(DND_FILES)
 file_names_listbox.dnd_bind("<<Drop>>", drop_inside_list_box)
 file_names_listbox.bind("<Double-1>", _display_file)
-# file_names_listbox.insert("end", "Train")
 
-label1 = Label(leftFrame, text='Files', anchor='w', background='#C0C0C0', borderwidth=1, relief='solid')
+label1 = Label(leftFrame, text='Files', width=24, anchor='w', background='#C0C0C0', borderwidth=1, relief='solid')
 label1.grid(row=0, sticky=S + W + E)
 
 leftFrame.rowconfigure(1, weight=1)
@@ -141,7 +136,7 @@ topFrame.rowconfigure(0, weight=1)
 
 # Mo file explorer
 def import_file():
-    global data, filepath
+    global data
     filepath = filedialog.askopenfilename(initialdir="/",
                                           title="Select a File",
                                           filetypes=(("Data files",
@@ -164,7 +159,7 @@ def import_file():
             file_names_listbox.insert("end", file_name)
             file_names_listbox.selection_set('end')
             file_names_listbox.activate('end')
-            path_map[file_name] = filepath
+            path_map.append(file_name)
         else:
             index = list(path_map).index(file_name)
             file_names_listbox.selection_set(index)
@@ -186,7 +181,7 @@ def import_file():
             file_names_listbox.insert("end", file_name)
             file_names_listbox.selection_set('end')
             file_names_listbox.activate('end')
-            path_map[file_name] = filepath
+            path_map.append(file_name)
         else:
             index = list(path_map).index(file_name)
             file_names_listbox.selection_set(index)
@@ -420,12 +415,14 @@ def delete():
 # Quay tro lai data ban dau
 def restore():
     global data
-    if filepath[-5:] == ".xlsx":
-        data = pandas.read_excel(filepath)
-        create_table(data)
-    elif filepath[-4:] == ".csv":
-        data = pandas.read_csv(filepath)
-        create_table(data)
+    if file_names_listbox.curselection() != ():
+        file_name = file_names_listbox.get(file_names_listbox.curselection())
+        if file_name[-5:] == ".xlsx":
+            data = pandas.read_excel(file_name)
+            create_table(data)
+        elif file_name[-4:] == ".csv":
+            data = pandas.read_csv(file_name)
+            create_table(data)
 
 
 # Chia data thanh 2 set de train va test
@@ -440,7 +437,7 @@ def split():
         current_listbox_items = set(file_names_listbox.get(0, "end"))
         for file in split_list:
             if file not in current_listbox_items:
-                path_map[file] = file
+                path_map.append(file)
                 file_names_listbox.insert(file_names_listbox.curselection()[0]+1, file)
         browseLabel.configure(text="Done splitting data")
 
@@ -474,16 +471,10 @@ def update_result(data1, weight=False):
                     accuracyLabel.configure(text=str2)
                     timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
 
-                    # weightLabel1.configure(state='normal')
-                    # weightLabel1.delete('1.0', tkinter.END)
-                    # weight_str = df.to_string(index=True)
-                    # weightLabel1.insert(tkinter.INSERT, weight_str)
-                    # weightLabel1.configure(state='disabled')
-
                     data1 = pandas.concat([data1, pandas.Series(conclusion, name='Prediction')], axis=1)
                     create_table(data1, True)
 
-                    browseLabel.configure(text='Trained')
+                    browseLabel.configure(text='Tested')
                 else:
                     browseLabel.configure(text='Train model first')
             else:
