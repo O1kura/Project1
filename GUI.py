@@ -1,5 +1,4 @@
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
+import os
 import time
 import tkinter
 import shutil
@@ -29,11 +28,18 @@ gui.columnconfigure(1, weight=1)
 gui.rowconfigure(1, weight=1)
 
 
-# TODO
-# Doc tat ca cac file tu folder cua project
+# Doc tat ca cac file csv, xlsx tu folder cua project
 def read_folder():
-
-    return
+    path = os.getcwd()
+    os.chdir(path)
+    for file_path in os.listdir():
+        if file_path in ['w_train.csv', 'ket_qua.csv', 'DataTblop.csv']:
+            continue
+        if file_path.endswith(".xlsx") or file_path.endswith(".csv"):
+            path_object = Path(file_path)
+            file_name = path_object.name
+            file_names_listbox.insert("end", file_name)
+            path_map.append(file_name)
 
 
 ####################################
@@ -51,17 +57,7 @@ def drop_inside_list_box(event):
     file_paths = _parse_drop_files(event.data)
     current_listbox_items = set(file_names_listbox.get(0, "end"))
     for file_path in file_paths:
-        if file_path.endswith(".xlsx"):
-            path_object = Path(file_path)
-            file_name = path_object.name
-
-            shutil.copy(path_object, file_name)
-
-            if file_name not in current_listbox_items:
-                file_names_listbox.insert("end", file_name)
-                path_map.append(file_name)
-
-        if file_path.endswith(".csv"):
+        if file_path.endswith(".xlsx") or file_path.endswith(".csv"):
             path_object = Path(file_path)
             file_name = path_object.name
 
@@ -135,6 +131,25 @@ topFrame.rowconfigure(0, weight=1)
 
 
 # Mo file explorer
+def import_to_gui(filepath,current_listbox_items):
+    path_object = Path(filepath)
+    file_name = path_object.name
+    file_names_listbox.select_clear(0, 'end')
+
+    shutil.copy(filepath, file_name)
+
+    if file_name not in current_listbox_items:
+        file_names_listbox.insert("end", file_name)
+        file_names_listbox.selection_set('end')
+        file_names_listbox.activate('end')
+        path_map.append(file_name)
+    else:
+        index = list(path_map).index(file_name)
+        file_names_listbox.selection_set(index)
+        file_names_listbox.activate(index)
+        file_names_listbox.see(index)
+        file_names_listbox.selection_anchor(index)
+    create_table(data)
 def import_file():
     global data
     filepath = filedialog.askopenfilename(initialdir="/",
@@ -149,46 +164,14 @@ def import_file():
     if filepath[-5:] == ".xlsx":
         browseLabel.configure(text="File: " + filepath)
         data = pandas.read_excel(filepath)
-        path_object = Path(filepath)
-        file_name = path_object.name
-        file_names_listbox.select_clear(0, 'end')
 
-        shutil.copy(filepath, file_name)
-
-        if file_name not in current_listbox_items:
-            file_names_listbox.insert("end", file_name)
-            file_names_listbox.selection_set('end')
-            file_names_listbox.activate('end')
-            path_map.append(file_name)
-        else:
-            index = list(path_map).index(file_name)
-            file_names_listbox.selection_set(index)
-            file_names_listbox.activate(index)
-            file_names_listbox.see(index)
-            file_names_listbox.selection_anchor(index)
-        create_table(data)
+        import_to_gui(filepath, current_listbox_items)
 
     elif filepath[-4:] == ".csv":
         browseLabel.configure(text="File: " + filepath)
         data = pandas.read_csv(filepath)
-        path_object = Path(filepath)
-        file_name = path_object.name
-        file_names_listbox.select_clear(0, 'end')
 
-        shutil.copy(filepath, file_name)
-
-        if file_name not in current_listbox_items:
-            file_names_listbox.insert("end", file_name)
-            file_names_listbox.selection_set('end')
-            file_names_listbox.activate('end')
-            path_map.append(file_name)
-        else:
-            index = list(path_map).index(file_name)
-            file_names_listbox.selection_set(index)
-            file_names_listbox.activate(index)
-            file_names_listbox.see(index)
-            file_names_listbox.selection_anchor(index)
-        create_table(data)
+        import_to_gui(filepath,current_listbox_items)
     else:
         browseLabel.configure(text="Not a correct data file")
 
@@ -503,6 +486,10 @@ def update_result(data1, weight=False):
             browseLabel.configure(text='Value Error (Numeric only)')
 
 
+def Run():
+    read_folder()
+    gui.mainloop()
+
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    gui.mainloop()
+    Run()
