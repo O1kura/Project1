@@ -5,11 +5,14 @@ import shutil
 from tkinter import *
 from tkinter import filedialog, ttk
 import tkinterdnd2
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from matplotlib.figure import Figure
 from tkinterdnd2 import DND_FILES
 import tkinter.scrolledtext as st
 from pathlib import Path
 import pandas
 import Algorithm
+import CS_IFS
 import TrainAndTestSplitting
 
 data = pandas.DataFrame
@@ -21,6 +24,8 @@ screen_width = gui.winfo_screenwidth()
 screen_height = gui.winfo_screenheight()
 
 gui.geometry("%dx%d+%d+%d" % (screen_width * 2 / 3, screen_height / 2, screen_width / 6, screen_height / 4))
+# gui.geometry("%dx%d+%d+%d" % (screen_width, screen_height, 0, 0))
+gui.state("zoomed")
 gui.title('Project1GUI')
 gui.configure(background="#A5A8EC")
 
@@ -131,7 +136,7 @@ topFrame.rowconfigure(0, weight=1)
 
 
 # Mo file explorer
-def import_to_gui(filepath,current_listbox_items):
+def import_to_gui(filepath, current_listbox_items):
     path_object = Path(filepath)
     file_name = path_object.name
     file_names_listbox.select_clear(0, 'end')
@@ -173,7 +178,7 @@ def import_file():
         browseLabel.configure(text="File: " + filepath)
         data = pandas.read_csv(filepath)
 
-        import_to_gui(filepath,current_listbox_items)
+        import_to_gui(filepath, current_listbox_items)
     else:
         browseLabel.configure(text="Not a correct data file")
 
@@ -218,25 +223,37 @@ style = ttk.Style(MiddleFrame)
 style.theme_use("clam")
 style.configure("Treeview.Heading", background="#C0C0C0")
 
-canvas_frame = Frame(MiddleFrame, height=150)
-canvas_frame.grid(row=1, column=0, sticky=W+E)
+outer_canvas = Canvas(MiddleFrame, height=200)
+canvas_frame = Frame(outer_canvas)
+canvas_frame.grid(sticky='news')
 
-canvas = Canvas(canvas_frame)
+
+def multiview(*args):
+    table.xview(*args)
+    outer_canvas.xview(*args)
+
 
 # Tao scrollbar
 table_scroll = Scrollbar(MiddleFrame)
 table_scroll.grid(row=0, column=1, sticky=N + S)
 
 table_scroll1 = Scrollbar(MiddleFrame, orient="horizontal")
+outer_canvas.configure(xscrollcommand=table_scroll1.set)
 table_scroll1.grid(row=2, column=0, sticky=W + E)
 
+
+def scroll_func(event):
+    outer_canvas.configure(scrollregion=outer_canvas.bbox("all"))
+
+
+outer_canvas.grid(row=1, column=0, sticky=W+E)
+outer_canvas.create_window((0, 0), window=canvas_frame, anchor='nw')
+canvas_frame.bind("<Configure>", scroll_func)
+
 table_scroll.config(command=table.yview)
-table_scroll1.config(command=table.xview)
+table_scroll1.config(command=multiview)
 
 table.config(yscrollcommand=table_scroll.set, xscrollcommand=table_scroll1.set)
-
-MiddleFrame.columnconfigure(0, weight=1)
-MiddleFrame.rowconfigure(0, weight=1)
 
 # Tao menu cho chuot phai
 table_menu = Menu(MiddleFrame, tearoff=0)
@@ -285,8 +302,8 @@ def create_table(data1, trained=False):
 
         table.config(columns=col)
 
-        width = int(table.winfo_width()/len(col))
-        width = max(width, 100)
+        width = int(table.winfo_width() / len(col))
+        width = max(width, 200)
 
         # Tao cot cua bang
         for i in range(len(col)):
@@ -308,20 +325,33 @@ def create_table(data1, trained=False):
             table.tag_configure('wrong', background='yellow')
 
 
+fig = Figure(figsize=(5, 5),
+             dpi=100)
+
+# list of squares
+y = [i ** 2 for i in range(10)]
+
+# adding the subplot
+plot1 = fig.add_subplot(111)
+
+# plotting the graph
+plot1.plot(y)
+
+
 def initial_detail(given_table):
     cols = data.columns.tolist()
-    x_cor = 0
-
+    # x_cor = 0
+    i = 0
     for child in canvas_frame.winfo_children():
         child.destroy()
 
     for col in cols:
         width = given_table.column(col, 'width')
-        inside_canvas = Canvas(canvas_frame, width=width, height=150)
-        inside_canvas.place(x=x_cor, relheight=1)
-        label = Label(inside_canvas, text=col, anchor='center', background="magenta")
-        label.place(relx=0.1, relwidth=0.8, rely=0.1, relheight=0.8)
-        x_cor = x_cor + width
+        inside_canvas = FigureCanvasTkAgg(fig, canvas_frame)
+        inside_canvas.draw()
+        inside_canvas.get_tk_widget().grid(column=i, row=0, sticky=N + W + E + S)
+        inside_canvas.get_tk_widget().configure(height=200, width=width)
+        i = i + 1
 
 
 #########################################
@@ -331,7 +361,7 @@ rightFrame = Frame(gui)
 rightFrame.grid(row=1, column=2, sticky=S + E + N + W, padx=5, pady=5)
 rightFrame.rowconfigure(9, weight=1)
 
-trainBtn = Button(rightFrame, text='Train', height=1, width=8, command=lambda: update_result(data1=data))
+trainBtn = Button(rightFrame, text='Nhom2', height=1, width=8, command=lambda: update_result(data1=data))
 trainBtn.grid(row=1, column=0, padx=5, pady=5)
 
 restoreBtn = Button(rightFrame, text='Restore', height=1, width=8, command=lambda: restore())
@@ -343,7 +373,7 @@ del_Btn.grid(row=2, column=0, padx=5, pady=5)
 splitBtn = Button(rightFrame, text='Split', height=1, width=8, command=lambda: split())
 splitBtn.grid(row=1, column=1, padx=5, pady=5)
 
-test_btn = Button(rightFrame, text='Test', height=1, width=8,
+test_btn = Button(rightFrame, text='Nhom1', height=1, width=8,
                   command=lambda: update_result(data1=data, weight=True))
 test_btn.grid(row=1, column=2, pady=5, padx=5)
 
@@ -442,13 +472,13 @@ def split():
         file_name = file_names_listbox.get(file_names_listbox.curselection())
         t = TrainAndTestSplitting.TrainAndTestSplitting(file_name)
         split_list = t.trainAndTestSplitting(train_size=0.8, test_size=0.2, method="stratified")
-    # Them vao pathmap
-    # Them vao file_names_listbox
+        # Them vao pathmap
+        # Them vao file_names_listbox
         current_listbox_items = set(file_names_listbox.get(0, "end"))
         for file in split_list:
             if file not in current_listbox_items:
                 path_map.append(file)
-                file_names_listbox.insert(file_names_listbox.curselection()[0]+1, file)
+                file_names_listbox.insert(file_names_listbox.curselection()[0] + 1, file)
         browseLabel.configure(text="Done splitting data")
 
 
@@ -469,45 +499,51 @@ def update_result(data1, weight=False):
         try:
             if weight:
                 attribute = data1.columns.drop([data1.columns[len(data1.columns) - 1]])
-                if not calculated_weight.empty and calculated_weight.index.equals(attribute):
-                    start_time = time.time()
-                    (str1, str2, str3, df, conclusion) = \
-                        Algorithm.upload_file(data1, distance_method.get(), calculated_weight)
-                    et = time.time()
-                    calculated_weight = df
-                    final_res = round((et - start_time) * 1000, 4)
-                    numberLabel.configure(text=str3)
-                    correctLabel.configure(text=str1)
-                    accuracyLabel.configure(text=str2)
-                    timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
-
-                    data1 = pandas.concat([data1, pandas.Series(conclusion, name='Prediction')], axis=1)
-                    create_table(data1, True)
-
-                    browseLabel.configure(text='Tested')
-                else:
-                    browseLabel.configure(text='Train model first')
-            else:
+                # if not calculated_weight.empty and calculated_weight.index.equals(attribute):
                 start_time = time.time()
-                (str1, str2, str3, df, conclusion) = Algorithm.upload_file(data1, distance_method.get())
+                (str1, str2, str3, df, conclusion) = \
+                    Algorithm.upload_file(data1, distance_method.get())\
+
                 et = time.time()
-                calculated_weight = df
+                # calculated_weight = df
                 final_res = round((et - start_time) * 1000, 4)
                 numberLabel.configure(text=str3)
                 correctLabel.configure(text=str1)
                 accuracyLabel.configure(text=str2)
                 timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
 
-                weightLabel1.configure(state='normal')
-                weightLabel1.delete('1.0', tkinter.END)
-                weight_str = df.to_string(index=True)
-                weightLabel1.insert(tkinter.INSERT, weight_str)
-                weightLabel1.configure(state='disabled')
-
                 data1 = pandas.concat([data1, pandas.Series(conclusion, name='Prediction')], axis=1)
                 create_table(data1, True)
 
-                browseLabel.configure(text='Trained')
+                browseLabel.configure(text='Trained 1')
+            # else:
+            #     browseLabel.configure(text='Train model first')
+            else:
+                start_time = time.time()
+                # (str1, str2, str3, df, conclusion) = Algorithm.upload_file(data1, distance_method.get())
+                file_name = file_names_listbox.get(file_names_listbox.curselection())
+                model = CS_IFS.CS_IFS(file_name)
+                accuracy = model.fit()
+                model.predict()
+                et = time.time()
+                # calculated_weight = df
+                final_res = round((et - start_time) * 1000, 4)
+                string3 = 'Size of data : ' + str(len(data))
+                numberLabel.configure(text=string3)
+                # correctLabel.configure(text=str1)
+                accuracyLabel.configure(text=('Accuracy: ' + str(round(accuracy, 2)) + ' %'))
+                timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
+                #
+                # weightLabel1.configure(state='normal')
+                # weightLabel1.delete('1.0', tkinter.END)
+                # weight_str = df.to_string(index=True)
+                # weightLabel1.insert(tkinter.INSERT, weight_str)
+                # weightLabel1.configure(state='disabled')
+                #
+                # data1 = pandas.concat([data1, pandas.Series(conclusion, name='Prediction')], axis=1)
+                # create_table(data1, True)
+
+                browseLabel.configure(text='Trained 2')
 
         except TypeError:
             browseLabel.configure(text='Value Error (Numeric only)')
@@ -516,6 +552,7 @@ def update_result(data1, weight=False):
 def Run():
     read_folder()
     gui.mainloop()
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
