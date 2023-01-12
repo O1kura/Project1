@@ -114,7 +114,7 @@ file_names_listbox.drop_target_register(DND_FILES)
 file_names_listbox.dnd_bind("<<Drop>>", drop_inside_list_box)
 file_names_listbox.bind("<Double-1>", _display_file)
 
-label1 = Label(leftFrame, text='Files', width=24, anchor='w', background='#C0C0C0', borderwidth=1, relief='solid')
+label1 = Label(leftFrame, text='Files', width=20, anchor='w', background='#C0C0C0', borderwidth=1, relief='solid')
 label1.grid(row=0, sticky=S + W + E)
 
 leftFrame.rowconfigure(1, weight=1)
@@ -150,6 +150,8 @@ def import_to_gui(filepath,current_listbox_items):
         file_names_listbox.see(index)
         file_names_listbox.selection_anchor(index)
     create_table(data)
+
+
 def import_file():
     global data
     filepath = filedialog.askopenfilename(initialdir="/",
@@ -215,12 +217,18 @@ table.place(relx=0, rely=0, relheight=1, relwidth=1)
 style = ttk.Style(MiddleFrame)
 style.theme_use("clam")
 style.configure("Treeview.Heading", background="#C0C0C0")
+
+canvas_frame = Frame(MiddleFrame, height=150)
+canvas_frame.grid(row=1, column=0, sticky=W+E)
+
+canvas = Canvas(canvas_frame)
+
 # Tao scrollbar
 table_scroll = Scrollbar(MiddleFrame)
 table_scroll.grid(row=0, column=1, sticky=N + S)
 
 table_scroll1 = Scrollbar(MiddleFrame, orient="horizontal")
-table_scroll1.grid(row=1, column=0, sticky=W + E)
+table_scroll1.grid(row=2, column=0, sticky=W + E)
 
 table_scroll.config(command=table.yview)
 table_scroll1.config(command=table.xview)
@@ -277,11 +285,14 @@ def create_table(data1, trained=False):
 
         table.config(columns=col)
 
+        width = int(table.winfo_width()/len(col))
+        width = max(width, 100)
+
         # Tao cot cua bang
         for i in range(len(col)):
             table.column(col[i],
-                         minwidth=100,
-                         width=100,
+                         minwidth=width,
+                         width=width,
                          anchor='e')
             table.heading(col[i], text=col[i], anchor=CENTER)
 
@@ -291,10 +302,26 @@ def create_table(data1, trained=False):
                 table.insert(parent='', index='end', values=row, tags='wrong')
             else:
                 table.insert(parent='', index='end', values=row)
-
+        initial_detail(table)
         # Highlight dong co tag 'wrong'
         if trained:
             table.tag_configure('wrong', background='yellow')
+
+
+def initial_detail(given_table):
+    cols = data.columns.tolist()
+    x_cor = 0
+
+    for child in canvas_frame.winfo_children():
+        child.destroy()
+
+    for col in cols:
+        width = given_table.column(col, 'width')
+        inside_canvas = Canvas(canvas_frame, width=width, height=150)
+        inside_canvas.place(x=x_cor, relheight=1)
+        label = Label(inside_canvas, text=col, anchor='center', background="magenta")
+        label.place(relx=0.1, relwidth=0.8, rely=0.1, relheight=0.8)
+        x_cor = x_cor + width
 
 
 #########################################
