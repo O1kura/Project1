@@ -13,12 +13,15 @@ from pathlib import Path
 import pandas
 import Algorithm
 import CS_IFS
+import EDA
 import TrainAndTestSplitting
 
 data = pandas.DataFrame
-calculated_weight = pandas.Series
 path_map = []
 gui = tkinterdnd2.Tk()
+current_file_name = ''
+eda = None
+fig_list = []
 
 screen_width = gui.winfo_screenwidth()
 screen_height = gui.winfo_screenheight()
@@ -31,7 +34,6 @@ gui.configure(background="#A5A8EC")
 
 gui.columnconfigure(1, weight=1)
 gui.rowconfigure(1, weight=1)
-
 
 # Doc tat ca cac file csv, xlsx tu folder cua project
 def read_folder():
@@ -75,16 +77,31 @@ def drop_inside_list_box(event):
 
 # Hien thi file
 def _display_file(event):
-    global data
+    global data, current_file_name
     if file_names_listbox.curselection() != ():
         file_name = file_names_listbox.get(file_names_listbox.curselection())
+        current_file_name = file_name
         if file_name.endswith(".xlsx"):
             browseLabel.configure(text="File: " + file_name)
             data = pandas.read_excel(file_name)
         elif file_name.endswith(".csv"):
             browseLabel.configure(text="File: " + file_name)
             data = pandas.read_csv(file_name)
-        create_table(data)
+        draw()
+
+
+# Ve ra gui
+def draw():
+    global eda
+    eda = EDA.EDA(current_file_name)
+    eda.PreProcessing()
+    cols = data.columns.tolist()
+    fig_list.clear()
+    for i in range(len(cols)):
+        fig = eda.Using(i)
+        fig_list.append(fig)
+    create_table(data)
+    initial_detail()
 
 
 # phan tich duong dan file
@@ -137,12 +154,13 @@ topFrame.rowconfigure(0, weight=1)
 
 # Mo file explorer
 def import_to_gui(filepath, current_listbox_items):
+    global current_file_name, eda
     path_object = Path(filepath)
     file_name = path_object.name
     file_names_listbox.select_clear(0, 'end')
 
     shutil.copy(filepath, file_name)
-
+    current_file_name = file_name
     if file_name not in current_listbox_items:
         file_names_listbox.insert("end", file_name)
         file_names_listbox.selection_set('end')
@@ -154,8 +172,7 @@ def import_to_gui(filepath, current_listbox_items):
         file_names_listbox.activate(index)
         file_names_listbox.see(index)
         file_names_listbox.selection_anchor(index)
-    create_table(data)
-
+    draw()
 
 def import_file():
     global data
@@ -256,38 +273,38 @@ table_scroll1.config(command=multiview)
 table.config(yscrollcommand=table_scroll.set, xscrollcommand=table_scroll1.set)
 
 # Tao menu cho chuot phai
-table_menu = Menu(MiddleFrame, tearoff=0)
-table_selected_col = ''
-table_menu.add_command(label='Delete Column',
-                       command=lambda: delete_col(table_selected_col))
-
-
-# Hien thi menu (Xoa) o phan heading ma khong phai nhan
-def popup(event):
-    global table_selected_col
-
-    region = table.identify_region(event.x, event.y)
-    if region == 'heading':
-        selected_col1 = table.identify_column(event.x)
-        col1 = table.column(selected_col1).get('id')
-        data_col = data.columns.tolist()
-
-        if data_col[-1] != col1:
-            try:
-                table_menu.tk_popup(event.x_root, event.y_root)
-                table_selected_col = col1
-            finally:
-                table_menu.grab_release()
-
-
-# Thuc hien xoa
-def delete_col(col1):
-    data.drop(columns=col1, axis=1, inplace=True)
-    create_table(data)
-
-
-# Bind phan popup vao nut chuot trai
-table.bind('<Button-3>', popup)
+# table_menu = Menu(MiddleFrame, tearoff=0)
+# table_selected_col = ''
+# table_menu.add_command(label='Delete Column',
+#                        command=lambda: delete_col(table_selected_col))
+#
+#
+# # Hien thi menu (Xoa) o phan heading ma khong phai nhan
+# def popup(event):
+#     global table_selected_col
+#
+#     region = table.identify_region(event.x, event.y)
+#     if region == 'heading':
+#         selected_col1 = table.identify_column(event.x)
+#         col1 = table.column(selected_col1).get('id')
+#         data_col = data.columns.tolist()
+#
+#         if data_col[-1] != col1:
+#             try:
+#                 table_menu.tk_popup(event.x_root, event.y_root)
+#                 table_selected_col = col1
+#             finally:
+#                 table_menu.grab_release()
+#
+#
+# # Thuc hien xoa
+# def delete_col(col1):
+#     data.drop(columns=col1, axis=1, inplace=True)
+#     create_table(data)
+#
+#
+# # Bind phan popup vao nut chuot trai
+# table.bind('<Button-3>', popup)
 
 
 # Hien thi data
@@ -295,6 +312,9 @@ def create_table(data1, trained=False):
     if data1.empty:
         browseLabel.configure(text='Empty data')
     else:
+        string3 = 'Size of data : ' + str(len(data))
+        numberLabel.configure(text=string3)
+
         col = data1.columns.tolist()
 
         for i in table.get_children():
@@ -319,39 +339,24 @@ def create_table(data1, trained=False):
                 table.insert(parent='', index='end', values=row, tags='wrong')
             else:
                 table.insert(parent='', index='end', values=row)
-        initial_detail(table)
         # Highlight dong co tag 'wrong'
         if trained:
             table.tag_configure('wrong', background='yellow')
 
 
-fig = Figure(figsize=(5, 5),
-             dpi=100)
-
-# list of squares
-y = [i ** 2 for i in range(10)]
-
-# adding the subplot
-plot1 = fig.add_subplot(111)
-
-# plotting the graph
-plot1.plot(y)
-
-
-def initial_detail(given_table):
+def initial_detail():
     cols = data.columns.tolist()
-    # x_cor = 0
-    i = 0
+
     for child in canvas_frame.winfo_children():
         child.destroy()
 
-    for col in cols:
-        width = given_table.column(col, 'width')
-        inside_canvas = FigureCanvasTkAgg(fig, canvas_frame)
+    for i in range(len(cols)):
+        width = table.column(cols[i], 'width')
+
+        inside_canvas = FigureCanvasTkAgg(fig_list[i], canvas_frame)
         inside_canvas.draw()
         inside_canvas.get_tk_widget().grid(column=i, row=0, sticky=N + W + E + S)
         inside_canvas.get_tk_widget().configure(height=200, width=width)
-        i = i + 1
 
 
 #########################################
@@ -361,47 +366,56 @@ rightFrame = Frame(gui)
 rightFrame.grid(row=1, column=2, sticky=S + E + N + W, padx=5, pady=5)
 rightFrame.rowconfigure(9, weight=1)
 
-trainBtn = Button(rightFrame, text='Nhom2', height=1, width=8, command=lambda: update_result(data1=data))
-trainBtn.grid(row=1, column=0, padx=5, pady=5)
+trainBtn = Button(rightFrame, text='Train', height=1, width=8, command=lambda: train_nhom2(data1=data))
+trainBtn.grid(row=2, column=0, padx=5, pady=5)
 
-restoreBtn = Button(rightFrame, text='Restore', height=1, width=8, command=lambda: restore())
-restoreBtn.grid(row=2, column=1, padx=5, pady=5)
+restoreBtn = Button(rightFrame, text='Nhom 1', height=1, width=8, command=lambda: train_nhom1(data1=data))
+restoreBtn.grid(row=3, column=1, padx=5, pady=5)
 
-del_Btn = Button(rightFrame, text='Delete', height=1, width=8, command=lambda: delete())
-del_Btn.grid(row=2, column=0, padx=5, pady=5)
+del_Btn = Button(rightFrame, text='', height=1, width=8)#, command=lambda: delete())
+del_Btn.grid(row=3, column=0, padx=5, pady=5)
 
 splitBtn = Button(rightFrame, text='Split', height=1, width=8, command=lambda: split())
-splitBtn.grid(row=1, column=1, padx=5, pady=5)
+splitBtn.grid(row=2, column=1, padx=5, pady=5)
 
-test_btn = Button(rightFrame, text='Nhom1', height=1, width=8,
-                  command=lambda: update_result(data1=data, weight=True))
-test_btn.grid(row=1, column=2, pady=5, padx=5)
+test_btn = Button(rightFrame, text='Test', height=1, width=8,
+                  command=lambda: train_nhom2(data1=data, test=True))
+test_btn.grid(row=2, column=2, pady=5, padx=5)
 
 detail_btn = Button(rightFrame, text='Details', height=1, width=8,
                     command=lambda: graph_detail())
-detail_btn.grid(row=2, column=2, padx=5, pady=5)
+detail_btn.grid(row=3, column=2, padx=5, pady=5)
 
 distance_label = Label(rightFrame, text='Measure:')
 distance_label.grid(row=0, column=0, pady=5, padx=5)
 
+eval_label = Label(rightFrame, text='Evaluation:')
+eval_label.grid(row=1, column=0, pady=5, padx=5)
+
 # OptionMenu cho viec thay doi do do
-distance_list = ['Euler distance', 'Hamming distance(2)', 'Hamming distance(3)', 'Ngan distance', 'Mahanta distance']
+distance_list = ['Default', 'Hamming', 'Hamming 3 function', 'Ngân', 'Manhanta', 'Mincowski']
 distance_method = StringVar(rightFrame)
-distance_method.set('Euler distance')
+distance_method.set('default')
 
 distance_menu = OptionMenu(rightFrame, distance_method, *distance_list)
 distance_menu.grid(row=0, column=1, pady=5, padx=5, columnspan=2, sticky=E + W)
 distance_menu.configure(width=18, anchor='w')
 
+# OptionMenu cho viec thay doi cach danh gia
+eval_list = ['accuracy', 'precificity', 'sensitivity', 'f1_score', 'precision']
+eval_method = StringVar(rightFrame)
+eval_method.set('accuracy')
+
+eval_menu = OptionMenu(rightFrame, eval_method, *eval_list)
+eval_menu.grid(row=1, column=1, pady=5, padx=5, columnspan=2, sticky=E + W)
+eval_menu.configure(width=18, anchor='w')
+
 # Cac label hien thi ket qua
 resultLabel = Label(rightFrame, text='Result', width=20, anchor='center', borderwidth=1, relief='solid')
-resultLabel.grid(row=3, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+resultLabel.grid(row=4, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
 
 numberLabel = Label(rightFrame, text='Data size: ', width=20, anchor=W)
-numberLabel.grid(row=4, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
-
-correctLabel = Label(rightFrame, text='Correct Prediction: ', width=20, anchor=W)
-correctLabel.grid(row=5, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+numberLabel.grid(row=5, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
 
 accuracyLabel = Label(rightFrame, text='Accuracy: ', width=20, anchor=W)
 accuracyLabel.grid(row=6, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
@@ -418,50 +432,52 @@ weightLabel1.grid(row=9, column=0, columnspan=3, padx=5, pady=5, sticky=E + W + 
 
 # Cac chuc nang
 # XOa item
-def delete():
-    if data.empty:
-        browseLabel.configure(text='Empty data')
-    else:
-        # Dua ra gia tri cua item duoc xoa
-        for item in table.selection():
-
-            item_value = table.item(item)['values']
-
-            col = data.columns.tolist()
-
-            # So sanh tung gia tri mot cua tung cot thuoc tinh
-            # de lay duoc index cua thuoc tinh can xoa
-
-            def is_float(element: any):
-                try:
-                    float(element)
-                    return float(element)
-                except ValueError:
-                    return element
-
-            index_def = data[data[col[0]] == is_float(item_value[0])].index
-            for i in range(1, len(col) - 1):
-                index_def = set(index_def).intersection(
-                    data[data[col[i]] == is_float(item_value[i])].index
-                )
-            # Xoa trong treeview
-            table.delete(item)
-
-            # Xoa trong data
-            data.drop(index=index_def, inplace=True)
-            data.reset_index(drop=True, inplace=True)
+# def delete():
+#     if data.empty:
+#         browseLabel.configure(text='Empty data')
+#     else:
+#         # Dua ra gia tri cua item duoc xoa
+#         for item in table.selection():
+#
+#             item_value = table.item(item)['values']
+#
+#             col = data.columns.tolist()
+#
+#             # So sanh tung gia tri mot cua tung cot thuoc tinh
+#             # de lay duoc index cua thuoc tinh can xoa
+#
+#             def is_float(element: any):
+#                 try:
+#                     float(element)
+#                     return float(element)
+#                 except ValueError:
+#                     return element
+#
+#             index_def = data[data[col[0]] == is_float(item_value[0])].index
+#             for i in range(1, len(col) - 1):
+#                 index_def = set(index_def).intersection(
+#                     data[data[col[i]] == is_float(item_value[i])].index
+#                 )
+#             # Xoa trong treeview
+#             table.delete(item)
+#
+#             # Xoa trong data
+#             data.drop(index=index_def, inplace=True)
+#             data.reset_index(drop=True, inplace=True)
+#
+#         string3 = 'Size of data : ' + str(len(data))
+#         numberLabel.configure(text=string3)
 
 
 # Quay tro lai data ban dau
 def restore():
     global data
     if file_names_listbox.curselection() != ():
-        file_name = file_names_listbox.get(file_names_listbox.curselection())
-        if file_name[-5:] == ".xlsx":
-            data = pandas.read_excel(file_name)
+        if current_file_name[-5:] == ".xlsx":
+            data = pandas.read_excel(current_file_name)
             create_table(data)
-        elif file_name[-4:] == ".csv":
-            data = pandas.read_csv(file_name)
+        elif current_file_name[-4:] == ".csv":
+            data = pandas.read_csv(current_file_name)
             create_table(data)
 
 
@@ -469,8 +485,8 @@ def restore():
 def split():
     # Thuc hien chia data
     if file_names_listbox.curselection() != ():
-        file_name = file_names_listbox.get(file_names_listbox.curselection())
-        t = TrainAndTestSplitting.TrainAndTestSplitting(file_name)
+        # file_name = file_names_listbox.get(file_names_listbox.curselection())
+        t = TrainAndTestSplitting.TrainAndTestSplitting(current_file_name)
         split_list = t.trainAndTestSplitting(train_size=0.8, test_size=0.2, method="stratified")
         # Them vao pathmap
         # Them vao file_names_listbox
@@ -491,62 +507,69 @@ def graph_detail():
 
 
 # Hien thi ket qua
-def update_result(data1, weight=False):
+def train_nhom2(data1, test=False):
     if data1.empty:
         browseLabel.configure(text='Empty data')
     else:
-        global calculated_weight
+        restore()
+
         try:
-            if weight:
-                attribute = data1.columns.drop([data1.columns[len(data1.columns) - 1]])
-                # if not calculated_weight.empty and calculated_weight.index.equals(attribute):
-                start_time = time.time()
-                (str1, str2, str3, df, conclusion) = \
-                    Algorithm.upload_file(data1, distance_method.get())\
-
-                et = time.time()
-                # calculated_weight = df
-                final_res = round((et - start_time) * 1000, 4)
-                numberLabel.configure(text=str3)
-                correctLabel.configure(text=str1)
-                accuracyLabel.configure(text=str2)
-                timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
-
-                data1 = pandas.concat([data1, pandas.Series(conclusion, name='Prediction')], axis=1)
-                create_table(data1, True)
-
-                browseLabel.configure(text='Trained 1')
-            # else:
-            #     browseLabel.configure(text='Train model first')
+            model = CS_IFS.CS_IFS(current_file_name)
+            start_time = time.time()
+            accuracy = model.fit(measure=distance_method.get(), evaluation=eval_method.get())
+            if test:
+                accuracy = model.predict()
+                browseLabel.configure(text='Test 2')
             else:
-                start_time = time.time()
-                # (str1, str2, str3, df, conclusion) = Algorithm.upload_file(data1, distance_method.get())
-                file_name = file_names_listbox.get(file_names_listbox.curselection())
-                model = CS_IFS.CS_IFS(file_name)
-                accuracy = model.fit()
-                model.predict()
-                et = time.time()
-                # calculated_weight = df
-                final_res = round((et - start_time) * 1000, 4)
-                string3 = 'Size of data : ' + str(len(data))
-                numberLabel.configure(text=string3)
-                # correctLabel.configure(text=str1)
-                accuracyLabel.configure(text=('Accuracy: ' + str(round(accuracy, 2)) + ' %'))
-                timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
-                #
-                # weightLabel1.configure(state='normal')
-                # weightLabel1.delete('1.0', tkinter.END)
-                # weight_str = df.to_string(index=True)
-                # weightLabel1.insert(tkinter.INSERT, weight_str)
-                # weightLabel1.configure(state='disabled')
-                #
-                # data1 = pandas.concat([data1, pandas.Series(conclusion, name='Prediction')], axis=1)
-                # create_table(data1, True)
-
                 browseLabel.configure(text='Trained 2')
+            et = time.time()
+
+            test = model.weights
+            attribute = data.columns.drop([data.columns[len(data.columns) - 1]])
+            w = round(pandas.Series(test, index=attribute), 4)
+
+            final_res = round((et - start_time) * 1000, 2)
+            accuracyLabel.configure(text=('Accuracy: ' + str(round(accuracy*100, 2)) + ' %'))
+            timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
+
+            weightLabel1.configure(state='normal')
+            weightLabel1.delete('1.0', tkinter.END)
+            weight_str = w.to_string(index=True)
+            weightLabel1.insert(tkinter.INSERT, weight_str)
+            weightLabel1.configure(state='disabled')
+
+        except FileNotFoundError:
+            browseLabel.configure(text="Split data before using this function")
 
         except TypeError:
             browseLabel.configure(text='Value Error (Numeric only)')
+
+
+def train_nhom1(data1):
+    if data1.empty:
+        browseLabel.configure(text='Empty data')
+    else:
+        restore()
+        start_time = time.time()
+        (str2, str3, df, conclusion) = \
+            Algorithm.upload_file(data1, distance_method.get())
+        et = time.time()
+
+        final_res = round((et - start_time) * 1000, 4)
+        numberLabel.configure(text=str3)
+        accuracyLabel.configure(text=str2)
+        timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
+
+        weightLabel1.configure(state='normal')
+        weightLabel1.delete('1.0', tkinter.END)
+        weight_str = df.to_string(index=True)
+        weightLabel1.insert(tkinter.INSERT, weight_str)
+        weightLabel1.configure(state='disabled')
+
+        data1 = pandas.concat([data1, pandas.Series(conclusion, name='Prediction')], axis=1)
+        create_table(data1, True)
+
+        browseLabel.configure(text='Trained 1')
 
 
 def Run():
