@@ -20,20 +20,21 @@ data = pandas.DataFrame
 path_map = []
 gui = tkinterdnd2.Tk()
 current_file_name = ''
-eda = None
+# eda = None
 fig_list = []
 
 screen_width = gui.winfo_screenwidth()
 screen_height = gui.winfo_screenheight()
 
-gui.geometry("%dx%d+%d+%d" % (screen_width * 2 / 3, screen_height / 2, screen_width / 6, screen_height / 4))
-# gui.geometry("%dx%d+%d+%d" % (screen_width, screen_height, 0, 0))
+# gui.geometry("%dx%d+%d+%d" % (screen_width * 2 / 3, screen_height / 2, screen_width / 6, screen_height / 4))
+gui.geometry("%dx%d+%d+%d" % (screen_width, screen_height, 0, 0))
 gui.state("zoomed")
 gui.title('Project1GUI')
 gui.configure(background="#A5A8EC")
 
 gui.columnconfigure(1, weight=1)
 gui.rowconfigure(1, weight=1)
+
 
 # Doc tat ca cac file csv, xlsx tu folder cua project
 def read_folder():
@@ -82,26 +83,26 @@ def _display_file(event):
         file_name = file_names_listbox.get(file_names_listbox.curselection())
         current_file_name = file_name
         if file_name.endswith(".xlsx"):
-            browseLabel.configure(text="File: " + file_name)
             data = pandas.read_excel(file_name)
         elif file_name.endswith(".csv"):
-            browseLabel.configure(text="File: " + file_name)
             data = pandas.read_csv(file_name)
         draw()
 
 
 # Ve ra gui
 def draw():
-    global eda
-    eda = EDA.EDA(current_file_name)
-    eda.PreProcessing()
+    browseLabel.configure(text="Loading...")
+    browseLabel.update_idletasks()
+    eda_gui = EDA.EDA(current_file_name)
+    eda_gui.PreProcessing()
     cols = data.columns.tolist()
     fig_list.clear()
     for i in range(len(cols)):
-        fig = eda.Using(i)
+        fig = eda_gui.Using(i)
         fig_list.append(fig)
     create_table(data)
     initial_detail()
+    browseLabel.configure(text="File: " + current_file_name)
 
 
 # phan tich duong dan file
@@ -173,6 +174,7 @@ def import_to_gui(filepath, current_listbox_items):
         file_names_listbox.see(index)
         file_names_listbox.selection_anchor(index)
     draw()
+
 
 def import_file():
     global data
@@ -263,7 +265,7 @@ def scroll_func(event):
     outer_canvas.configure(scrollregion=outer_canvas.bbox("all"))
 
 
-outer_canvas.grid(row=1, column=0, sticky=W+E)
+outer_canvas.grid(row=1, column=0, sticky=W + E)
 outer_canvas.create_window((0, 0), window=canvas_frame, anchor='nw')
 canvas_frame.bind("<Configure>", scroll_func)
 
@@ -271,6 +273,7 @@ table_scroll.config(command=table.yview)
 table_scroll1.config(command=multiview)
 
 table.config(yscrollcommand=table_scroll.set, xscrollcommand=table_scroll1.set)
+
 
 # Tao menu cho chuot phai
 # table_menu = Menu(MiddleFrame, tearoff=0)
@@ -344,6 +347,7 @@ def create_table(data1, trained=False):
             table.tag_configure('wrong', background='yellow')
 
 
+# Hien thi nhung thong so ban dau cua data
 def initial_detail():
     cols = data.columns.tolist()
 
@@ -354,9 +358,10 @@ def initial_detail():
         width = table.column(cols[i], 'width')
 
         inside_canvas = FigureCanvasTkAgg(fig_list[i], canvas_frame)
-        inside_canvas.draw()
+        inside_canvas.draw_idle()
         inside_canvas.get_tk_widget().grid(column=i, row=0, sticky=N + W + E + S)
         inside_canvas.get_tk_widget().configure(height=200, width=width)
+
 
 
 #########################################
@@ -372,7 +377,7 @@ trainBtn.grid(row=2, column=0, padx=5, pady=5)
 restoreBtn = Button(rightFrame, text='Nhom 1', height=1, width=8, command=lambda: train_nhom1(data1=data))
 restoreBtn.grid(row=3, column=1, padx=5, pady=5)
 
-del_Btn = Button(rightFrame, text='', height=1, width=8)#, command=lambda: delete())
+del_Btn = Button(rightFrame, text='', height=1, width=8)  # , command=lambda: delete())
 del_Btn.grid(row=3, column=0, padx=5, pady=5)
 
 splitBtn = Button(rightFrame, text='Split', height=1, width=8, command=lambda: split())
@@ -529,7 +534,7 @@ def train_nhom2(data1, test=False):
             w = round(pandas.Series(test, index=attribute), 4)
 
             final_res = round((et - start_time) * 1000, 2)
-            accuracyLabel.configure(text=('Accuracy: ' + str(round(accuracy*100, 2)) + ' %'))
+            accuracyLabel.configure(text=('Accuracy: ' + str(round(accuracy * 100, 2)) + ' %'))
             timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
 
             weightLabel1.configure(state='normal')
@@ -572,11 +577,8 @@ def train_nhom1(data1):
         browseLabel.configure(text='Trained 1')
 
 
-def Run():
+# Press the green button in the gutter to run the script.
+if __name__ == '__main__':
     read_folder()
     gui.mainloop()
 
-
-# Press the green button in the gutter to run the script.
-if __name__ == '__main__':
-    Run()
