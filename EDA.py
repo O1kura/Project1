@@ -46,13 +46,14 @@ class EDA:
     def BarPlot(self, _keys, _values, colName, isLabel=False):
         if isLabel == False:
             # fig = plt.Figure(figsize=(10, 7))
+            plt.figure(figsize=(8, 8))
             plt.bar(_keys, _values)
             # plt.xlabel(colName + " values")
             # plt.ylabel("Number of values")
             # plt.title("Bar plot of " + colName + " feature.")
             # plt.show()
         else:
-            fig, ax = plt.subplots(figsize=(15, 8))
+            fig, ax = plt.subplots(figsize=(8, 8))
             ax.barh(_keys, _values)
             for s in ['top', 'bottom', 'left', 'right']:
                 ax.spines[s].set_visible(False)
@@ -60,7 +61,7 @@ class EDA:
             ax.yaxis.set_ticks_position('none')
             ax.xaxis.set_tick_params(pad=5)
             ax.yaxis.set_tick_params(pad=10)
-            ax.grid(b=True, color='grey',
+            ax.grid(#b=True, #color='grey',
                     linestyle='-.', linewidth=0.5,
                     alpha=0.2)
             ax.invert_yaxis()
@@ -71,9 +72,9 @@ class EDA:
                          color='grey')
             # ax.set_title('Classification label of ' + self.filename + " dataset.",
             #              loc='left', )
-            fig.text(0.9, 0.15, 'Group2_P1', fontsize=12,
-                     color='grey', ha='right', va='bottom',
-                     alpha=0.7)
+            # fig.text(0.9, 0.15, 'Group2_P1', fontsize=12,
+            #          color='grey', ha='right', va='bottom',
+            #          alpha=0.7)
         # plt.show()
 
     def PieChart(self, _keys, _values, colName):
@@ -100,27 +101,36 @@ class EDA:
         self.ReadyForBarPlot(self.dataHeader[enter - 1])
         des = self.data[self.dataHeader[enter - 1]].describe()
         print(des)
-        count = des['count']
-        mean = des['mean']
-        std = des['std']
-        min = des['min']
-        max = des['max']
         print("_______________Statistical information______________")
+        count = des['count']
         print("Count:", int(count))
         if enter != self.numberOfHeader + 1:
+
+            mean = des['mean']
+            std = des['std']
+            min = des['min']
+            max = des['max']
             print("Unique value:", self.data[self.dataHeader[enter - 1]].unique().size)
             print("Mean:", mean)
             print("Standard Deviation:", std)
             print("Min:", min)
             print("Max:", max)
-        else:
-            print("Number of label:", self.data[self.dataHeader[enter - 1]].unique().size)
-        if ((min >= mean / 4) and (max <= mean * 4) and (enter != (self.numberOfHeader + 1))):
-            self.BarPlot(self.dataDic[enter - 1].keys(), self.dataDic[enter - 1].values(), self.dataHeader[enter - 1])
+
+            # else:
+            #     print("Number of label:", self.data[self.dataHeader[enter - 1]].unique().size)
+            if ((min >= mean / 4) and (max <= mean * 4) and (enter != (self.numberOfHeader + 1))):
+                print(1)
+                self.BarPlot(self.dataDic[enter - 1].keys(), self.dataDic[enter - 1].values(), self.dataHeader[enter - 1])
         if (enter == self.numberOfHeader + 1):
             labelList = []
             for key in self.dataDic[enter - 1]:
-                if int(key) == key:
+                def is_int(element: any):
+                    try:
+                        int(element)
+                        return int(element)
+                    except ValueError:
+                        return element
+                if is_int(key):
                     labelList.append("Label " + str(key))
                 else:
                     labelList.append(str(key))
@@ -134,11 +144,11 @@ class EDA:
                 self.PieChart(labelList, list(self.dataDic[enter - 1].values()), "Label")
 
     def Using(self, enter):
-        plt.close("all")
+        plt.close()
         enter = enter + 1
         self.ReadyForBarPlot(self.dataHeader[enter - 1])
         des = self.data[self.dataHeader[enter - 1]].describe()
-        print(des)
+        # print(des)
         if enter != self.numberOfHeader + 1:
             mean = des['mean']
             min = des['min']
@@ -162,12 +172,11 @@ class EDA:
                 else:
                     labelList.append(str(key))
             self.BarPlot(labelList, list(self.dataDic[enter - 1].values()), "Label", isLabel=True)
-
         return plt.gcf()
-# filename = "Train_KAHRAMAN.csv"
+# filename = "Humidity.csv"
 # eda = EDA(filename)
 # eda.PreProcessing()
-# # for i in range(6):
-# #     eda.Using(i)
+#   # for i in range(6):
+#   # eda.Using(i)
 # while(1):
 #     eda.Tutorial()
