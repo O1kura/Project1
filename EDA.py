@@ -1,3 +1,5 @@
+import io
+
 import pandas as pd
 import matplotlib.pyplot as plt
 
@@ -76,6 +78,7 @@ class EDA:
             #          color='grey', ha='right', va='bottom',
             #          alpha=0.7)
         # plt.show()
+        #     plt.tight_layout()
 
     def PieChart(self, _keys, _values, colName):
         s = sum(_values)
@@ -84,13 +87,13 @@ class EDA:
         _explode = [0.2 for i in range(len(_values))]
         plt.pie(_values, labels=_keys, explode=_explode,
                 autopct='%1.0f%%', shadow=True, startangle=90)
-        plt.title("Classification label of " + self.filename + " dataset.")
-        k = len(_values)
-        if k < 10:
-            k = self.idx[k]
-        else:
-            k = str(k)
-        plt.legend(title=(k + " Labels: "), loc=0)
+        # plt.title("Classification label of " + self.filename + " dataset.")
+        # k = len(_values)
+        # if k < 10:
+        #     k = self.idx[k]
+        # else:
+        #     k = str(k)
+        # plt.legend(title=(k + " Labels: "), loc=0)
         # plt.show()
 
     def Tutorial(self):
@@ -171,12 +174,14 @@ class EDA:
                     labelList.append("Label " + str(key))
                 else:
                     labelList.append(str(key))
-            self.BarPlot(labelList, list(self.dataDic[enter - 1].values()), "Label", isLabel=True)
+            # self.BarPlot(labelList, list(self.dataDic[enter - 1].values()), "Label", isLabel=True)
+            self.PieChart(labelList, list(self.dataDic[enter - 1].values()), "Label")
+
         return plt.gcf()
 # filename = "Humidity.csv"
 # eda = EDA(filename)
 # eda.PreProcessing()
-#   # for i in range(6):
-#   # eda.Using(i)
+# #   # for i in range(6):
+# #   # eda.Using(i)
 # while(1):
 #     eda.Tutorial()
