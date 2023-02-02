@@ -6,7 +6,6 @@ from tkinter import *
 from tkinter import filedialog, ttk
 import tkinterdnd2
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-from matplotlib.figure import Figure
 from tkinterdnd2 import DND_FILES
 import tkinter.scrolledtext as st
 from pathlib import Path
@@ -20,15 +19,14 @@ data = pandas.DataFrame
 path_map = []
 gui = tkinterdnd2.Tk()
 current_file_name = ''
-# eda = None
 fig_list = []
 
 screen_width = gui.winfo_screenwidth()
 screen_height = gui.winfo_screenheight()
 
-# gui.geometry("%dx%d+%d+%d" % (screen_width * 2 / 3, screen_height / 2, screen_width / 6, screen_height / 4))
-gui.geometry("%dx%d+%d+%d" % (screen_width, screen_height, 0, 0))
-gui.state("zoomed")
+gui.geometry("%dx%d+%d+%d" % (screen_width * 2 / 3, screen_height / 2, screen_width / 6, screen_height / 4))
+# gui.geometry("%dx%d+%d+%d" % (screen_width, screen_height, 0, 0))
+# gui.state("zoomed")
 gui.title('Project1GUI')
 gui.configure(background="#A5A8EC")
 
@@ -81,28 +79,13 @@ def _display_file(event):
     global data, current_file_name
     if file_names_listbox.curselection() != ():
         file_name = file_names_listbox.get(file_names_listbox.curselection())
-        current_file_name = file_name
-        if file_name.endswith(".xlsx"):
-            data = pandas.read_excel(file_name)
-        elif file_name.endswith(".csv"):
-            data = pandas.read_csv(file_name)
-        draw()
-
-
-# Ve ra gui
-def draw():
-    browseLabel.configure(text="Loading...")
-    browseLabel.update_idletasks()
-    eda_gui = EDA.EDA(current_file_name)
-    eda_gui.PreProcessing()
-    cols = data.columns.tolist()
-    fig_list.clear()
-    for i in range(len(cols)):
-        fig = eda_gui.Using(i)
-        fig_list.append(fig)
-    create_table(data)
-    initial_detail()
-    browseLabel.configure(text="File: " + current_file_name)
+        if current_file_name != file_name:
+            current_file_name = file_name
+            if file_name.endswith(".xlsx"):
+                data = pandas.read_excel(file_name)
+            elif file_name.endswith(".csv"):
+                data = pandas.read_csv(file_name)
+            draw(current_file_name, data)
 
 
 # phan tich duong dan file
@@ -155,7 +138,7 @@ topFrame.rowconfigure(0, weight=1)
 
 # Mo file explorer
 def import_to_gui(filepath, current_listbox_items):
-    global current_file_name, eda
+    global current_file_name
     path_object = Path(filepath)
     file_name = path_object.name
     file_names_listbox.select_clear(0, 'end')
@@ -173,7 +156,7 @@ def import_to_gui(filepath, current_listbox_items):
         file_names_listbox.activate(index)
         file_names_listbox.see(index)
         file_names_listbox.selection_anchor(index)
-    draw()
+    draw(current_file_name, data)
 
 
 def import_file():
@@ -247,6 +230,7 @@ canvas_frame = Frame(outer_canvas)
 canvas_frame.grid(sticky='news')
 
 
+# Cho horizontal scrollbar (table_scroll1)
 def multiview(*args):
     table.xview(*args)
     outer_canvas.xview(*args)
@@ -261,6 +245,7 @@ outer_canvas.configure(xscrollcommand=table_scroll1.set)
 table_scroll1.grid(row=2, column=0, sticky=W + E)
 
 
+# Scroll tren canvas trong frame
 def scroll_func(event):
     outer_canvas.configure(scrollregion=outer_canvas.bbox("all"))
 
@@ -315,7 +300,7 @@ def create_table(data1, trained=False):
     if data1.empty:
         browseLabel.configure(text='Empty data')
     else:
-        string3 = 'Size of data : ' + str(len(data))
+        string3 = 'Size of data : ' + str(len(data1))
         numberLabel.configure(text=string3)
 
         col = data1.columns.tolist()
@@ -363,6 +348,25 @@ def initial_detail():
         inside_canvas.get_tk_widget().configure(height=200, width=width)
 
 
+# Ve ra gui
+def draw(file_name, data2):
+    browseLabel.configure(text="Loading...")
+    browseLabel.update_idletasks()
+    if data.empty:
+        browseLabel.configure(text='Empty data')
+    else:
+        eda_gui = EDA.EDA(file_name)
+        eda_gui.PreProcessing()
+        cols = data.columns.tolist()
+        fig_list.clear()
+        for i in range(len(cols)):
+            fig = eda_gui.Using(i)
+            fig_list.append(fig)
+
+        create_table(data2)
+        initial_detail()
+        browseLabel.configure(text="File: " + file_name)
+
 
 #########################################
 # Frame de hien thi ket qua cua thuat toan
@@ -374,11 +378,11 @@ rightFrame.rowconfigure(9, weight=1)
 trainBtn = Button(rightFrame, text='Train', height=1, width=8, command=lambda: train_nhom2(data1=data))
 trainBtn.grid(row=2, column=0, padx=5, pady=5)
 
-restoreBtn = Button(rightFrame, text='Nhom 1', height=1, width=8, command=lambda: train_nhom1(data1=data))
-restoreBtn.grid(row=3, column=1, padx=5, pady=5)
-
-del_Btn = Button(rightFrame, text='', height=1, width=8)  # , command=lambda: delete())
-del_Btn.grid(row=3, column=0, padx=5, pady=5)
+# restoreBtn = Button(rightFrame, text='Group 1', height=1, width=8, command=lambda: train_nhom1(data1=data))
+# restoreBtn.grid(row=3, column=1, padx=5, pady=5)
+#
+# del_Btn = Button(rightFrame, text='', height=1, width=8)  # , command=lambda: delete())
+# del_Btn.grid(row=3, column=0, padx=5, pady=5)
 
 splitBtn = Button(rightFrame, text='Split', height=1, width=8, command=lambda: split())
 splitBtn.grid(row=2, column=1, padx=5, pady=5)
@@ -387,9 +391,9 @@ test_btn = Button(rightFrame, text='Test', height=1, width=8,
                   command=lambda: train_nhom2(data1=data, test=True))
 test_btn.grid(row=2, column=2, pady=5, padx=5)
 
-detail_btn = Button(rightFrame, text='Details', height=1, width=8,
-                    command=lambda: graph_detail())
-detail_btn.grid(row=3, column=2, padx=5, pady=5)
+# detail_btn = Button(rightFrame, text='Def matrix', height=1, width=8,
+#                     command=lambda: graph_detail())
+# detail_btn.grid(row=3, column=2, padx=5, pady=5)
 
 distance_label = Label(rightFrame, text='Measure:')
 distance_label.grid(row=0, column=0, pady=5, padx=5)
@@ -488,18 +492,23 @@ def restore():
 
 # Chia data thanh 2 set de train va test
 def split():
+    if data.empty:
+        browseLabel.configure(text='Empty data')
     # Thuc hien chia data
-    if file_names_listbox.curselection() != ():
+    elif file_names_listbox.curselection() != ():
         # file_name = file_names_listbox.get(file_names_listbox.curselection())
         t = TrainAndTestSplitting.TrainAndTestSplitting(current_file_name)
+        t.trainAndTestSplitting(train_size=0.8, test_size=0.2, method="stratified")
+
         split_list = t.trainAndTestSplitting(train_size=0.8, test_size=0.2, method="stratified")
         # Them vao pathmap
         # Them vao file_names_listbox
         current_listbox_items = set(file_names_listbox.get(0, "end"))
         for file in split_list:
             if file not in current_listbox_items:
-                path_map.append(file)
+                path_map.insert(file_names_listbox.curselection()[0] + 1, file)
                 file_names_listbox.insert(file_names_listbox.curselection()[0] + 1, file)
+
         browseLabel.configure(text="Done splitting data")
 
 
@@ -511,27 +520,65 @@ def graph_detail():
     return None
 
 
-# Hien thi ket qua
+def create_toplevel(attribute, def_matrix):
+    top = Toplevel(gui)
+    top.title("Defuse Matrix")
+    # Create label
+    top_label = Label(top, text="def", height=1, width=10)
+    top_label.grid(row=0, column=0)
+
+    size = len(attribute)
+    for i in range(size):
+        j = i + 1
+        top_label1 = Label(top, text=attribute[i], relief="ridge", height=1, width=10)
+        top_label1.grid(row=0, column=j)
+
+        top_label2 = Label(top, text=attribute[i], relief="ridge", height=1, width=10)
+        top_label2.grid(row=j, column=0)
+
+    for i in range(size):
+        for j in range(size):
+            top_label1 = Label(top, text=def_matrix[i][j], relief="ridge", height=1, width=10)
+            top_label1.grid(row=i + 1, column=j + 1)
+
+    # Create Exit button
+    top.mainloop()
+
+
+# Hien thi ket qua train/test theo nhom 2
 def train_nhom2(data1, test=False):
     if data1.empty:
         browseLabel.configure(text='Empty data')
     else:
-        restore()
-
         try:
             model = CS_IFS.CS_IFS(current_file_name)
             start_time = time.time()
             accuracy = model.fit(measure=distance_method.get(), evaluation=eval_method.get())
             if test:
                 accuracy = model.predict()
-                browseLabel.configure(text='Test 2')
+                file_name = "Test_" + current_file_name
             else:
-                browseLabel.configure(text='Trained 2')
+                file_name = "Train_" + current_file_name
             et = time.time()
 
-            test = model.weights
+            file_names_listbox.select_clear(0, 'end')
+
+            index = list(path_map).index(file_name)
+            file_names_listbox.selection_set(index)
+            file_names_listbox.activate(index)
+            file_names_listbox.see(index)
+            file_names_listbox.selection_anchor(index)
+
+            if file_name.endswith(".xlsx"):
+                data2 = pandas.read_excel(file_name)
+                draw(file_name, data2)
+            elif file_name.endswith(".csv"):
+                data2 = pandas.read_csv(file_name)
+                draw(file_name, data2)
+
+            weights = model.weights
             attribute = data.columns.drop([data.columns[len(data.columns) - 1]])
-            w = round(pandas.Series(test, index=attribute), 4)
+            w = round(pandas.Series(weights, index=attribute), 4)
 
             final_res = round((et - start_time) * 1000, 2)
             accuracyLabel.configure(text=('Accuracy: ' + str(round(accuracy * 100, 2)) + ' %'))
@@ -543,6 +590,9 @@ def train_nhom2(data1, test=False):
             weightLabel1.insert(tkinter.INSERT, weight_str)
             weightLabel1.configure(state='disabled')
 
+            def_matrix = model.getDefuseMatrix(not test)
+            create_toplevel(model.label, def_matrix)
+
         except FileNotFoundError:
             browseLabel.configure(text="Split data before using this function")
 
@@ -550,6 +600,7 @@ def train_nhom2(data1, test=False):
             browseLabel.configure(text='Value Error (Numeric only)')
 
 
+# Hien thi ket qua theo nhom 1
 def train_nhom1(data1):
     if data1.empty:
         browseLabel.configure(text='Empty data')
@@ -581,4 +632,3 @@ def train_nhom1(data1):
 if __name__ == '__main__':
     read_folder()
     gui.mainloop()
-
