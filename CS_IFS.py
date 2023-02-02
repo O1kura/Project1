@@ -66,6 +66,7 @@ class Evaluate(object):
                 else:
                     print("{:.3f}".format(matrix[i][j]), end=" " * (self.maxLen - s))
             print()
+        return self.defuseMatrix
 
     def accuracy(self):
         if self.binary == True:
@@ -507,9 +508,9 @@ class CS_IFS(object):
 
     def getDefuseMatrix(self, isTrain=True):
         if isTrain == True:
-            self.modelEvaluation.getMatrix(matrix=self.modelEvaluation.defuseMatrix, isDefuseMatrix=True)
+            return self.modelEvaluation.getMatrix(matrix=self.modelEvaluation.defuseMatrix, isDefuseMatrix=True)
         else:
-            self.TmodelEvaluation.getMatrix(matrix=self.TmodelEvaluation.defuseMatrix, isDefuseMatrix=True)
+            return self.TmodelEvaluation.getMatrix(matrix=self.TmodelEvaluation.defuseMatrix, isDefuseMatrix=True)
 
 
 # class naỳ chỉ để demo
@@ -534,8 +535,11 @@ class SpaceSearch(object):
 
 
 # lst = [0.0001]
-# filename = "Humidity.csv"
+# filename = "Train_KAHRAMAN.csv"
 # model = CS_IFS(filename)
 # model.fit(measure="mincowski", evaluation="f1_score", _p=2)
-# model.predict()
 # model.getDefuseMatrix()
+# model.predict()
+# matrix = model.getDefuseMatrix()
+# model.getDefuseMatrix(False)
+# print(len(matrix))
