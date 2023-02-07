@@ -4,6 +4,8 @@ import tkinter
 import shutil
 from tkinter import *
 from tkinter import filedialog, ttk
+
+import openpyxl as openpyxl
 import tkinterdnd2
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinterdnd2 import DND_FILES
@@ -24,9 +26,9 @@ fig_list = []
 screen_width = gui.winfo_screenwidth()
 screen_height = gui.winfo_screenheight()
 
-gui.geometry("%dx%d+%d+%d" % (screen_width * 2 / 3, screen_height / 2, screen_width / 6, screen_height / 4))
-# gui.geometry("%dx%d+%d+%d" % (screen_width, screen_height, 0, 0))
-# gui.state("zoomed")
+# gui.geometry("%dx%d+%d+%d" % (screen_width * 2 / 3, screen_height / 2, screen_width / 6, screen_height / 4))
+gui.geometry("%dx%d+%d+%d" % (screen_width, screen_height, 0, 0))
+gui.state("zoomed")
 gui.title('Project1GUI')
 gui.configure(background="#A5A8EC")
 
@@ -411,7 +413,7 @@ distance_menu.grid(row=0, column=1, pady=5, padx=5, columnspan=2, sticky=E + W)
 distance_menu.configure(width=18, anchor='w')
 
 # OptionMenu cho viec thay doi cach danh gia
-eval_list = ['accuracy', 'precificity', 'sensitivity', 'f1_score', 'precision']
+eval_list = ['accuracy', 'specificity', 'sensitivity', 'f1_score', 'precision', 'matthews_correlation_coef']
 eval_method = StringVar(rightFrame)
 eval_method.set('accuracy')
 
@@ -420,7 +422,7 @@ eval_menu.grid(row=1, column=1, pady=5, padx=5, columnspan=2, sticky=E + W)
 eval_menu.configure(width=18, anchor='w')
 
 # Cac label hien thi ket qua
-resultLabel = Label(rightFrame, text='Result', width=20, anchor='center', borderwidth=1, relief='solid')
+resultLabel = Button(rightFrame, text='Export Result', width=20, anchor='center', command=lambda : export_result())
 resultLabel.grid(row=4, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
 
 numberLabel = Label(rightFrame, text='Data size: ', width=20, anchor=W)
@@ -437,6 +439,9 @@ weightLabel.grid(row=8, column=0, columnspan=3, padx=5, pady=5, sticky=E + W + N
 
 weightLabel1 = st.ScrolledText(rightFrame, width=20)
 weightLabel1.grid(row=9, column=0, columnspan=3, padx=5, pady=5, sticky=E + W + N + S)
+
+train_data = pandas.DataFrame(index=eval_list)
+test_data = pandas.DataFrame(index=eval_list)
 
 
 # Cac chuc nang
@@ -520,10 +525,15 @@ def graph_detail():
     return None
 
 
-def create_toplevel(attribute, def_matrix):
+# Tao window hien thi defuse matrix
+def create_toplevel(attribute, def_matrix, test=False):
     top = Toplevel(gui)
-    top.title("Defuse Matrix")
-    # Create label
+    if test:
+        title = "Test Defuse Matrix"
+    else:
+        title = "Train Defuse Matrix"
+    top.title(title)
+
     top_label = Label(top, text="def", height=1, width=10)
     top_label.grid(row=0, column=0)
 
@@ -541,7 +551,6 @@ def create_toplevel(attribute, def_matrix):
             top_label1 = Label(top, text=def_matrix[i][j], relief="ridge", height=1, width=10)
             top_label1.grid(row=i + 1, column=j + 1)
 
-    # Create Exit button
     top.mainloop()
 
 
@@ -556,11 +565,17 @@ def train_nhom2(data1, test=False):
             accuracy = model.fit(measure=distance_method.get(), evaluation=eval_method.get())
             if test:
                 accuracy = model.predict()
+                modelEvaluation = model.TmodelEvaluation
                 file_name = "Test_" + current_file_name
             else:
+                modelEvaluation = model.modelEvaluation
                 file_name = "Train_" + current_file_name
-            et = time.time()
 
+            # Tinh toan thoi gian thuc hien
+            et = time.time()
+            final_res = round((et - start_time) * 1000, 2)
+
+            # Chi den file test hoac train tuong ung trong listbox
             file_names_listbox.select_clear(0, 'end')
 
             index = list(path_map).index(file_name)
@@ -569,6 +584,7 @@ def train_nhom2(data1, test=False):
             file_names_listbox.see(index)
             file_names_listbox.selection_anchor(index)
 
+            # Hien thi file
             if file_name.endswith(".xlsx"):
                 data2 = pandas.read_excel(file_name)
                 draw(file_name, data2)
@@ -576,13 +592,15 @@ def train_nhom2(data1, test=False):
                 data2 = pandas.read_csv(file_name)
                 draw(file_name, data2)
 
+            # Cap nhat cac ket qua
+            update_result(model.measure, modelEvaluation.to_return_list(), test)
+
+            accuracyLabel.configure(text=('Accuracy: ' + str(round(accuracy * 100, 2)) + ' %'))
+            timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
+
             weights = model.weights
             attribute = data.columns.drop([data.columns[len(data.columns) - 1]])
             w = round(pandas.Series(weights, index=attribute), 4)
-
-            final_res = round((et - start_time) * 1000, 2)
-            accuracyLabel.configure(text=('Accuracy: ' + str(round(accuracy * 100, 2)) + ' %'))
-            timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
 
             weightLabel1.configure(state='normal')
             weightLabel1.delete('1.0', tkinter.END)
@@ -591,7 +609,7 @@ def train_nhom2(data1, test=False):
             weightLabel1.configure(state='disabled')
 
             def_matrix = model.getDefuseMatrix(not test)
-            create_toplevel(model.label, def_matrix)
+            create_toplevel(model.label, def_matrix, test)
 
         except FileNotFoundError:
             browseLabel.configure(text="Split data before using this function")
@@ -626,6 +644,22 @@ def train_nhom1(data1):
         create_table(data1, True)
 
         browseLabel.configure(text='Trained 1')
+
+
+# Dien ket qua cua phep do vao train_data hoac test_data
+def update_result(measure, value, test=False):
+    if test:
+        test_data.insert(0, measure, value, allow_duplicates=True)
+    else:
+        train_data.insert(0, measure, value, allow_duplicates=True)
+
+
+# Export ket qua tu 2 train_data va test_data
+def export_result():
+    filename = current_file_name + '_Result.xlsx'
+    with pandas.ExcelWriter(filename) as writer:
+        train_data.to_excel(writer, sheet_name='Train Result')
+        test_data.to_excel(writer, sheet_name='Test Result')
 
 
 # Press the green button in the gutter to run the script.
