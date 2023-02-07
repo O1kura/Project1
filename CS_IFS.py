@@ -48,24 +48,24 @@ class Evaluate(object):
                     self.FP += 1
 
     def getMatrix(self, matrix, isDefuseMatrix=False):
-        takeFloat = False
-        if isDefuseMatrix == False:
-            takeFloat = True
-        print(" " * self.maxLen, end=" ")
-        for i in range(self.numberOfLabel):
-            k = len(str(self.setLabel[i]))
-            print(self.setLabel[i], end=" " * (self.maxLen - k))
-        print()
-        for i in range(self.numberOfLabel):
-            k = len(str(self.setLabel[i]))
-            print(self.setLabel[i], end=" " * (self.maxLen - k + 1))
-            for j in range(self.numberOfLabel):
-                s = len(str("{:.3f}".format(matrix[i][j])))
-                if takeFloat == False:
-                    print(matrix[i][j], end=" " * (self.maxLen - s))
-                else:
-                    print("{:.3f}".format(matrix[i][j]), end=" " * (self.maxLen - s))
-            print()
+        # takeFloat = False
+        # if isDefuseMatrix == False:
+        #     takeFloat = True
+        # print(" " * self.maxLen, end=" ")
+        # for i in range(self.numberOfLabel):
+        #     k = len(str(self.setLabel[i]))
+        #     # print(self.setLabel[i], end=" " * (self.maxLen - k))
+        # print()
+        # for i in range(self.numberOfLabel):
+        #     k = len(str(self.setLabel[i]))
+        #     print(self.setLabel[i], end=" " * (self.maxLen - k + 1))
+        #     for j in range(self.numberOfLabel):
+        #         s = len(str("{:.3f}".format(matrix[i][j])))
+        #         if takeFloat == False:
+        #             print(matrix[i][j], end=" " * (self.maxLen - s))
+        #         else:
+        #             print("{:.3f}".format(matrix[i][j]), end=" " * (self.maxLen - s))
+        #     print()
         return self.defuseMatrix
 
     def accuracy(self):
@@ -126,6 +126,11 @@ class Evaluate(object):
         elif method == "matthews_correlation_coef":
             result = self.Matthews_correlation_coef()
         return result
+
+    def to_return_list(self):
+        ret_list = [self.accuracy(), self.specificity(), self.sensitivity(), self.f1_score(), self.precision(),
+                    self.Matthews_correlation_coef()]
+        return ret_list
 
 
 class CS_IFS(object):
@@ -490,7 +495,7 @@ class CS_IFS(object):
         self.CalDistance(measure=measure)
         self.ClassificationLabel()
         self.EvaluationMethod(evaluation=evaluation)
-        print("The result of CS_IFS algorithm in the training set: ", "{:.4f}".format(self.accuracy))
+        # print("The result of CS_IFS algorithm in the training set: ", "{:.4f}".format(self.accuracy))
         return self.accuracy
 
     def writeFile(self):
@@ -503,7 +508,7 @@ class CS_IFS(object):
         self.CalDistance(isTrain=False, measure=self.measure)
         self.ClassificationLabel(isTrain=False)
         self.EvaluationMethod(isTrain=False, evaluation=self.evaluation)
-        print("The result of CS_IFS algorithm in the testing set: ", "{:.4f}".format(self.accuracyT))
+        # print("The result of CS_IFS algorithm in the testing set: ", "{:.4f}".format(self.accuracyT))
         return self.accuracyT
 
     def getDefuseMatrix(self, isTrain=True):
