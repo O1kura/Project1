@@ -4,8 +4,6 @@ import tkinter
 import shutil
 from tkinter import *
 from tkinter import filedialog, ttk
-
-import openpyxl as openpyxl
 import tkinterdnd2
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinterdnd2 import DND_FILES
@@ -17,11 +15,13 @@ import CS_IFS
 import EDA
 import TrainAndTestSplitting
 
-data = pandas.DataFrame
-path_map = []
-gui = tkinterdnd2.Tk()
-current_file_name = ''
-fig_list = []
+# Cac bien toan cuc
+save_location = "Result/"   # Duong dan luu ket qua
+data = pandas.DataFrame     # Data chinh de xu ly trong gui
+path_map = []               # Danh sach cac duong dan cua file du lieu trong folder hoac duoc them vao
+gui = tkinterdnd2.Tk()      # GUI
+current_file_name = ''      # Ten file se duoc su dung
+fig_list = []               # Danh sach cac figure sau khi su dung eda
 
 screen_width = gui.winfo_screenwidth()
 screen_height = gui.winfo_screenheight()
@@ -87,6 +87,7 @@ def _display_file(event):
                 data = pandas.read_excel(file_name)
             elif file_name.endswith(".csv"):
                 data = pandas.read_csv(file_name)
+            reset_gui()
             draw(current_file_name, data)
 
 
@@ -138,7 +139,7 @@ topFrame.columnconfigure(1, weight=1)
 topFrame.rowconfigure(0, weight=1)
 
 
-# Mo file explorer
+# Them vao gui
 def import_to_gui(filepath, current_listbox_items):
     global current_file_name
     path_object = Path(filepath)
@@ -158,9 +159,13 @@ def import_to_gui(filepath, current_listbox_items):
         file_names_listbox.activate(index)
         file_names_listbox.see(index)
         file_names_listbox.selection_anchor(index)
+
+    # Reset va ve gui
+    reset_gui()
     draw(current_file_name, data)
 
 
+# Mo file explorer
 def import_file():
     global data
     filepath = filedialog.askopenfilename(initialdir="/",
@@ -334,7 +339,32 @@ def create_table(data1, trained=False):
             table.tag_configure('wrong', background='yellow')
 
 
-# Hien thi nhung thong so ban dau cua data
+# Danh sach canvas hien thi do thi trong main gui
+canvas_list = []
+
+
+# Ham tra lai cua event click chuot trong canvas
+def call(event):
+    for i in range(len(canvas_list)):
+        if event.widget == canvas_list[i].get_tk_widget():
+            if len(toplevel_in_use) == 1:
+                toplevel_in_use[0].destroy()
+                toplevel_in_use.pop()
+
+            top = Toplevel(gui)
+            top.title("Graph")
+            toplevel_in_use.append(top)
+
+            canvas = FigureCanvasTkAgg(fig_list[i], top)
+            width = screen_width/3
+            canvas.get_tk_widget().configure(height=width, width=width)
+            canvas.get_tk_widget().pack()
+
+
+outer_canvas.bind("<Button-1>", call, "")
+
+
+# Hien thi cac do thi ra trong cac canvas con khac nhau
 def initial_detail():
     cols = data.columns.tolist()
 
@@ -345,9 +375,16 @@ def initial_detail():
         width = table.column(cols[i], 'width')
 
         inside_canvas = FigureCanvasTkAgg(fig_list[i], canvas_frame)
+        inside_canvas.new_manager(fig_list[i], 0)
+        # inside_canvas.mpl_connect("button_press_event", lambda e: inside_canvas.figure.show())
         inside_canvas.draw_idle()
         inside_canvas.get_tk_widget().grid(column=i, row=0, sticky=N + W + E + S)
         inside_canvas.get_tk_widget().configure(height=200, width=width)
+        canvas_list.append(inside_canvas)
+
+        bindtags = list(inside_canvas.get_tk_widget().bindtags())
+        bindtags.insert(1, outer_canvas)
+        inside_canvas.get_tk_widget().bindtags(tuple(bindtags))
 
 
 # Ve ra gui
@@ -357,10 +394,14 @@ def draw(file_name, data2):
     if data.empty:
         browseLabel.configure(text='Empty data')
     else:
+        # Goi ham eda
         eda_gui = EDA.EDA(file_name)
         eda_gui.PreProcessing()
+
         cols = data.columns.tolist()
         fig_list.clear()
+
+        # Luu cac figure duoc tao ra vao fig_list
         for i in range(len(cols)):
             fig = eda_gui.Using(i)
             fig_list.append(fig)
@@ -375,7 +416,7 @@ def draw(file_name, data2):
 # Cac nut chuc nang
 rightFrame = Frame(gui)
 rightFrame.grid(row=1, column=2, sticky=S + E + N + W, padx=5, pady=5)
-rightFrame.rowconfigure(9, weight=1)
+rightFrame.rowconfigure(15, weight=1)
 
 trainBtn = Button(rightFrame, text='Train', height=1, width=8, command=lambda: train_nhom2(data1=data))
 trainBtn.grid(row=2, column=0, padx=5, pady=5)
@@ -422,29 +463,49 @@ eval_menu.grid(row=1, column=1, pady=5, padx=5, columnspan=2, sticky=E + W)
 eval_menu.configure(width=18, anchor='w')
 
 # Cac label hien thi ket qua
-resultLabel = Button(rightFrame, text='Export Result', width=20, anchor='center', command=lambda : export_result())
-resultLabel.grid(row=4, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+resultLabel = Button(rightFrame, text='Export Result', width=20, anchor='center', command=lambda: export_result())
+resultLabel.grid(row=5, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+
+matrixBtn = Button(rightFrame, text='Defuse Matrix', width=20, anchor='center', state='disabled',
+                   command=lambda: create_toplevel())
+matrixBtn.grid(row=4, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
 
 numberLabel = Label(rightFrame, text='Data size: ', width=20, anchor=W)
-numberLabel.grid(row=5, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+numberLabel.grid(row=6, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+
+specLabel = Label(rightFrame, text='Specificity: ', width=20, anchor=W)
+specLabel.grid(row=8, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+
+f1Label = Label(rightFrame, text='F1_score: ', width=20, anchor=W)
+f1Label.grid(row=10, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+
+precLabel = Label(rightFrame, text='Precision: ', width=20, anchor=W)
+precLabel.grid(row=11, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+
+senLabel = Label(rightFrame, text='Sensitivity: ', width=20, anchor=W)
+senLabel.grid(row=9, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
 
 accuracyLabel = Label(rightFrame, text='Accuracy: ', width=20, anchor=W)
-accuracyLabel.grid(row=6, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+accuracyLabel.grid(row=7, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+
+matLabel = Label(rightFrame, text='Matthews_correlation_coef: ', width=20, anchor=W)
+matLabel.grid(row=12, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
 
 timeLabel = Label(rightFrame, text='Time executed: ', width=20, anchor=W)
-timeLabel.grid(row=7, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
+timeLabel.grid(row=13, column=0, columnspan=3, padx=5, pady=5, sticky=E + W)
 
 weightLabel = Label(rightFrame, text='Weight: ', width=20, anchor=W)
-weightLabel.grid(row=8, column=0, columnspan=3, padx=5, pady=5, sticky=E + W + N)
+weightLabel.grid(row=14, column=0, columnspan=3, padx=5, pady=5, sticky=E + W + N)
 
 weightLabel1 = st.ScrolledText(rightFrame, width=20)
-weightLabel1.grid(row=9, column=0, columnspan=3, padx=5, pady=5, sticky=E + W + N + S)
+weightLabel1.grid(row=15, column=0, columnspan=3, padx=5, pady=5, sticky=E + W + N + S)
 
 train_data = pandas.DataFrame(index=eval_list)
 test_data = pandas.DataFrame(index=eval_list)
 
 
 # Cac chuc nang
+
 # XOa item
 # def delete():
 #     if data.empty:
@@ -483,6 +544,21 @@ test_data = pandas.DataFrame(index=eval_list)
 #         numberLabel.configure(text=string3)
 
 
+# Reset gui
+def reset_gui():
+    global test_data, train_data
+    matrixBtn.configure(state="disabled")
+    accuracyLabel.configure(text="Accuracy:")
+    specLabel.configure(text="Specificity:")
+    senLabel.configure(text="Sensitivity:")
+    f1Label.configure(text="F1 score:")
+    precLabel.configure(text="Precision:")
+    matLabel.configure(text="Matthews_correlation_coef")
+    weightLabel1.delete('1.0', tkinter.END)
+    test_data = test_data.iloc[0:0]
+    train_data = train_data.iloc[0:0]
+
+
 # Quay tro lai data ban dau
 def restore():
     global data
@@ -503,8 +579,6 @@ def split():
     elif file_names_listbox.curselection() != ():
         # file_name = file_names_listbox.get(file_names_listbox.curselection())
         t = TrainAndTestSplitting.TrainAndTestSplitting(current_file_name)
-        t.trainAndTestSplitting(train_size=0.8, test_size=0.2, method="stratified")
-
         split_list = t.trainAndTestSplitting(train_size=0.8, test_size=0.2, method="stratified")
         # Them vao pathmap
         # Them vao file_names_listbox
@@ -525,30 +599,43 @@ def graph_detail():
     return None
 
 
+# Su dung cho viec tao ra toplevel va hien thi nhung thong so khac
+toplevel_in_use = []
+matrix_attribute = None
+def_matrix = None
+to_test = False
+
+
 # Tao window hien thi defuse matrix
-def create_toplevel(attribute, def_matrix, test=False):
+def create_toplevel():
+    if len(toplevel_in_use) == 1:
+        toplevel_in_use[0].destroy()
+        toplevel_in_use.pop()
+
     top = Toplevel(gui)
-    if test:
+    toplevel_in_use.append(top)
+
+    if to_test:
         title = "Test Defuse Matrix"
     else:
         title = "Train Defuse Matrix"
     top.title(title)
 
-    top_label = Label(top, text="def", height=1, width=10)
+    top_label = Label(top, text="def", height=3, width=10)
     top_label.grid(row=0, column=0)
 
-    size = len(attribute)
+    size = len(matrix_attribute)
     for i in range(size):
         j = i + 1
-        top_label1 = Label(top, text=attribute[i], relief="ridge", height=1, width=10)
+        top_label1 = Label(top, text=matrix_attribute[i], relief="ridge", height=3, width=10)
         top_label1.grid(row=0, column=j)
 
-        top_label2 = Label(top, text=attribute[i], relief="ridge", height=1, width=10)
+        top_label2 = Label(top, text=matrix_attribute[i], relief="ridge", height=3, width=10)
         top_label2.grid(row=j, column=0)
 
     for i in range(size):
         for j in range(size):
-            top_label1 = Label(top, text=def_matrix[i][j], relief="ridge", height=1, width=10)
+            top_label1 = Label(top, text=def_matrix[i][j], relief="ridge", height=3, width=10)
             top_label1.grid(row=i + 1, column=j + 1)
 
     top.mainloop()
@@ -559,12 +646,16 @@ def train_nhom2(data1, test=False):
     if data1.empty:
         browseLabel.configure(text='Empty data')
     else:
+        if len(toplevel_in_use) == 1:
+            toplevel_in_use[0].destroy()
+            toplevel_in_use.pop()
         try:
             model = CS_IFS.CS_IFS(current_file_name)
             start_time = time.time()
-            accuracy = model.fit(measure=distance_method.get(), evaluation=eval_method.get())
+            evaluation = eval_method.get()
+            model.fit(measure=distance_method.get(), evaluation=evaluation)
             if test:
-                accuracy = model.predict()
+                model.predict()
                 modelEvaluation = model.TmodelEvaluation
                 file_name = "Test_" + current_file_name
             else:
@@ -593,9 +684,15 @@ def train_nhom2(data1, test=False):
                 draw(file_name, data2)
 
             # Cap nhat cac ket qua
-            update_result(model.measure, modelEvaluation.to_return_list(), test)
+            result_list = modelEvaluation.to_return_list()
+            update_result(model.measure, result_list, test)
 
-            accuracyLabel.configure(text=('Accuracy: ' + str(round(accuracy * 100, 2)) + ' %'))
+            accuracyLabel.configure(text=('Accuracy: ' + str(round(result_list[0] * 100, 2)) + ' %'))
+            specLabel.configure(text=('Specificity: ' + str(round(result_list[1] * 100, 2)) + ' %'))
+            senLabel.configure(text=('Sensitivity: ' + str(round(result_list[2] * 100, 2)) + ' %'))
+            f1Label.configure(text=('F1 score: ' + str(round(result_list[3] * 100, 2)) + ' %'))
+            precLabel.configure(text=('Precision: ' + str(round(result_list[4] * 100, 2)) + ' %'))
+            matLabel.configure(text=('Matthews_correlation_coef: ' + str(round(result_list[5] * 100, 2)) + ' %'))
             timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
 
             weights = model.weights
@@ -608,8 +705,11 @@ def train_nhom2(data1, test=False):
             weightLabel1.insert(tkinter.INSERT, weight_str)
             weightLabel1.configure(state='disabled')
 
+            global def_matrix, matrix_attribute, to_test
             def_matrix = model.getDefuseMatrix(not test)
-            create_toplevel(model.label, def_matrix, test)
+            matrix_attribute = model.label
+            to_test = test
+            matrixBtn.configure(state='active')
 
         except FileNotFoundError:
             browseLabel.configure(text="Split data before using this function")
@@ -649,17 +749,26 @@ def train_nhom1(data1):
 # Dien ket qua cua phep do vao train_data hoac test_data
 def update_result(measure, value, test=False):
     if test:
-        test_data.insert(0, measure, value, allow_duplicates=True)
+        if measure not in test_data.columns:
+            test_data.insert(0, measure, value)
     else:
-        train_data.insert(0, measure, value, allow_duplicates=True)
+        if measure not in train_data.columns:
+            train_data.insert(0, measure, value)
 
 
 # Export ket qua tu 2 train_data va test_data
 def export_result():
-    filename = current_file_name + '_Result.xlsx'
-    with pandas.ExcelWriter(filename) as writer:
-        train_data.to_excel(writer, sheet_name='Train Result')
-        test_data.to_excel(writer, sheet_name='Test Result')
+    if not os.path.isdir(save_location):
+        os.mkdir(save_location)
+    if train_data.empty and test_data.empty:
+        browseLabel.configure(text="You should train/test")
+    else:
+        filename = "Result/" + os.path.splitext(current_file_name)[0] + ".xlsx"
+        with pandas.ExcelWriter(filename) as writer:
+            if not train_data.empty:
+                train_data.to_excel(writer, sheet_name='Train Result')
+            if not test_data.empty:
+                test_data.to_excel(writer, sheet_name='Test Result')
 
 
 # Press the green button in the gutter to run the script.
