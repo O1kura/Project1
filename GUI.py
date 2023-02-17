@@ -3,7 +3,7 @@ import time
 import tkinter
 import shutil
 from tkinter import *
-from tkinter import filedialog, ttk
+from tkinter import filedialog, ttk, messagebox
 import tkinterdnd2
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinterdnd2 import DND_FILES
@@ -34,6 +34,14 @@ gui.configure(background="#A5A8EC")
 
 gui.columnconfigure(1, weight=1)
 gui.rowconfigure(1, weight=1)
+
+gui.protocol("WM_DELETE_WINDOW", lambda: on_exit())
+
+
+def on_exit():
+    if messagebox.askyesno("Exit", "Do you want to quit the application?"):
+        gui.destroy()
+        gui.quit()
 
 
 # Doc tat ca cac file csv, xlsx tu folder cua project
