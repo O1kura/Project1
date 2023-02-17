@@ -26,9 +26,9 @@ fig_list = []               # Danh sach cac figure sau khi su dung eda
 screen_width = gui.winfo_screenwidth()
 screen_height = gui.winfo_screenheight()
 
-# gui.geometry("%dx%d+%d+%d" % (screen_width * 2 / 3, screen_height / 2, screen_width / 6, screen_height / 4))
-gui.geometry("%dx%d+%d+%d" % (screen_width, screen_height, 0, 0))
-gui.state("zoomed")
+gui.geometry("%dx%d+%d+%d" % (screen_width * 3 / 4, screen_height *3 / 4, screen_width / 8, screen_height / 8))
+# gui.geometry("%dx%d+%d+%d" % (screen_width, screen_height, 0, 0))
+# gui.state("zoomed")
 gui.title('Project1GUI')
 gui.configure(background="#A5A8EC")
 
@@ -350,15 +350,14 @@ def call(event):
             if len(toplevel_in_use) == 1:
                 toplevel_in_use[0].destroy()
                 toplevel_in_use.pop()
-
-            top = Toplevel(gui)
-            top.title("Graph")
-            toplevel_in_use.append(top)
-
-            canvas = FigureCanvasTkAgg(fig_list[i], top)
-            width = screen_width/3
-            canvas.get_tk_widget().configure(height=width, width=width)
-            canvas.get_tk_widget().pack()
+            if fig_list[i].get_axes():
+                top = Toplevel(gui)
+                top.title("Graph")
+                toplevel_in_use.append(top)
+                canvas = FigureCanvasTkAgg(fig_list[i], top)
+                width = screen_width/3
+                canvas.get_tk_widget().configure(height=width, width=width)
+                canvas.get_tk_widget().pack()
 
 
 outer_canvas.bind("<Button-1>", call, "")
@@ -376,7 +375,6 @@ def initial_detail():
 
         inside_canvas = FigureCanvasTkAgg(fig_list[i], canvas_frame)
         inside_canvas.new_manager(fig_list[i], 0)
-        # inside_canvas.mpl_connect("button_press_event", lambda e: inside_canvas.figure.show())
         inside_canvas.draw_idle()
         inside_canvas.get_tk_widget().grid(column=i, row=0, sticky=N + W + E + S)
         inside_canvas.get_tk_widget().configure(height=200, width=width)
@@ -399,12 +397,11 @@ def draw(file_name, data2):
         eda_gui.PreProcessing()
 
         cols = data.columns.tolist()
-        fig_list.clear()
 
         # Luu cac figure duoc tao ra vao fig_list
         for i in range(len(cols)):
             fig = eda_gui.Using(i)
-            fig_list.append(fig)
+            fig_list.insert(i, fig)
 
         create_table(data2)
         initial_detail()
@@ -555,6 +552,8 @@ def reset_gui():
     precLabel.configure(text="Precision:")
     matLabel.configure(text="Matthews_correlation_coef")
     weightLabel1.delete('1.0', tkinter.END)
+    fig_list.clear()
+    canvas_list.clear()
     test_data = test_data.iloc[0:0]
     train_data = train_data.iloc[0:0]
 
