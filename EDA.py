@@ -50,9 +50,10 @@ class EDA:
             # fig = plt.Figure(figsize=(10, 7))
             plt.figure(figsize=(8, 8))
             plt.bar(_keys, _values)
-            # plt.xlabel(colName + " values")
-            # plt.ylabel("Number of values")
+            plt.xlabel(colName + " values")
+            plt.ylabel("Number of values")
             # plt.title("Bar plot of " + colName + " feature.")
+            plt.title(colName)
             # plt.show()
         else:
             fig, ax = plt.subplots(figsize=(8, 8))
@@ -72,13 +73,13 @@ class EDA:
                          str(round((i.get_width()), 2)),
                          fontsize=10, fontweight='bold',
                          color='grey')
-            # ax.set_title('Classification label of ' + self.filename + " dataset.",
-            #              loc='left', )
+            ax.set_title("Classification label",
+                         loc='left', )
             # fig.text(0.9, 0.15, 'Group2_P1', fontsize=12,
             #          color='grey', ha='right', va='bottom',
             #          alpha=0.7)
         # plt.show()
-        #     plt.tight_layout()
+            plt.tight_layout()
 
     def PieChart(self, _keys, _values, colName):
         s = sum(_values)
@@ -87,13 +88,13 @@ class EDA:
         _explode = [0.2 for i in range(len(_values))]
         plt.pie(_values, labels=_keys, explode=_explode,
                 autopct='%1.0f%%', shadow=True, startangle=90)
-        # plt.title("Classification label of " + self.filename + " dataset.")
-        # k = len(_values)
-        # if k < 10:
-        #     k = self.idx[k]
-        # else:
-        #     k = str(k)
-        # plt.legend(title=(k + " Labels: "), loc=0)
+        plt.title("Label of dataset.")
+        k = len(_values)
+        if k < 10:
+            k = self.idx[k]
+        else:
+            k = str(k)
+        plt.legend(title=(k + " Labels: "), loc=0)
         # plt.show()
 
     def Tutorial(self):
@@ -181,7 +182,7 @@ class EDA:
 # filename = "Humidity.csv"
 # eda = EDA(filename)
 # eda.PreProcessing()
-# #   # for i in range(6):
-# #   # eda.Using(i)
+# # #   # for i in range(6):
+# # #   # eda.Using(i)
 # while(1):
 #     eda.Tutorial()
