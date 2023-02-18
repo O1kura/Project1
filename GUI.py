@@ -21,17 +21,17 @@ import EDA
 import TrainAndTestSplitting
 
 # Cac bien toan cuc
-save_location = "Result/"   # Duong dan luu ket qua
-data = pandas.DataFrame     # Data chinh de xu ly trong gui
-path_map = []               # Danh sach cac duong dan cua file du lieu trong folder hoac duoc them vao
-gui = tkinterdnd2.Tk()      # GUI
-current_file_name = ''      # Ten file se duoc su dung
-fig_list = []               # Danh sach cac figure sau khi su dung eda
+save_location = "Result/"  # Duong dan luu ket qua
+data = pandas.DataFrame  # Data chinh de xu ly trong gui
+path_map = []  # Danh sach cac duong dan cua file du lieu trong folder hoac duoc them vao
+gui = tkinterdnd2.Tk()  # GUI
+current_file_name = ''  # Ten file se duoc su dung
+fig_list = []  # Danh sach cac figure sau khi su dung eda
 
 screen_width = gui.winfo_screenwidth()
 screen_height = gui.winfo_screenheight()
 
-gui.geometry("%dx%d+%d+%d" % (screen_width * 3 / 4, screen_height *3 / 4, screen_width / 8, screen_height / 8))
+gui.geometry("%dx%d+%d+%d" % (screen_width * 3 / 4, screen_height * 3 / 4, screen_width / 8, screen_height / 8))
 # gui.geometry("%dx%d+%d+%d" % (screen_width, screen_height, 0, 0))
 # gui.state("zoomed")
 gui.title('Project1GUI')
@@ -354,25 +354,38 @@ def create_table(data1, trained=False):
 
 # Danh sach canvas hien thi do thi trong main gui
 canvas_list = []
+index = 0  # Luu lai gia tri cua index de dung
 
 
 # Ham tra lai cua event click chuot trong canvas
 def call(event):
     for i in range(len(canvas_list)):
-        if event.widget == canvas_list[i].get_tk_widget():
+        if event.widget == canvas_list[i].get_tk_widget() and fig_list[i].get_axes():
             if len(toplevel_in_use) == 1:
                 toplevel_in_use[0].destroy()
                 toplevel_in_use.pop()
-            if fig_list[i].get_axes():
-                top = Toplevel(gui)
-                top.title("Graph")
-                toplevel_in_use.append(top) 
-                canvas = FigureCanvasTkAgg(fig_list[i], top)
-                width = screen_width/3
-                canvas.get_tk_widget().configure(height=width, width=width)
-                canvas.get_tk_widget().pack()
-                btn = Button(top, text="Save", command=lambda:fig_list[i].savefig("Result/"))
-                btn.pack()
+
+            global index
+            index = i
+
+            top = Toplevel(gui)
+            top.title("Graph")
+            toplevel_in_use.append(top)
+
+            lb = Label(top, background="#25FFE3")
+            lb.pack(fill='x', side='top', pady=5)
+            canvas = FigureCanvasTkAgg(fig_list[i], top)
+            width = screen_width / 3
+            canvas.get_tk_widget().configure(height=width, width=width)
+            canvas.get_tk_widget().pack()
+
+            def btn_pressed():
+                filename = "Result/" + data.columns.tolist()[index] + ".png"
+                fig_list[index].savefig(filename)
+                lb.configure(text="Save to " + os.path.abspath(filename))
+
+            btn = Button(top, text="Save", command=btn_pressed)
+            btn.pack()
 
 
 outer_canvas.bind("<Button-1>", call, "")
@@ -800,7 +813,7 @@ def export_result():
             if not test_data.empty:
                 test_data.to_excel(writer, sheet_name='Test Result')
             weight_data.to_excel(writer, sheet_name="Weight")
-            browseLabel.configure(text="Export to "+os.path.abspath(filename))
+            browseLabel.configure(text="Export to " + os.path.abspath(filename))
 
 
 # Press the green button in the gutter to run the script.
