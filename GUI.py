@@ -1,9 +1,13 @@
+import io
 import os
 import time
 import tkinter
 import shutil
 from tkinter import *
 from tkinter import filedialog, ttk, messagebox
+
+import matplotlib.pyplot
+import matplotlib.pyplot as plt
 import tkinterdnd2
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinterdnd2 import DND_FILES
@@ -11,6 +15,7 @@ import tkinter.scrolledtext as st
 from pathlib import Path
 import pandas
 import Algorithm
+
 import CS_IFS
 import EDA
 import TrainAndTestSplitting
@@ -361,11 +366,13 @@ def call(event):
             if fig_list[i].get_axes():
                 top = Toplevel(gui)
                 top.title("Graph")
-                toplevel_in_use.append(top)
+                toplevel_in_use.append(top) 
                 canvas = FigureCanvasTkAgg(fig_list[i], top)
                 width = screen_width/3
                 canvas.get_tk_widget().configure(height=width, width=width)
                 canvas.get_tk_widget().pack()
+                btn = Button(top, text="Save", command=lambda:fig_list[i].savefig("Result/"))
+                btn.pack()
 
 
 outer_canvas.bind("<Button-1>", call, "")
@@ -505,8 +512,10 @@ weightLabel.grid(row=14, column=0, columnspan=3, padx=5, pady=5, sticky=E + W + 
 weightLabel1 = st.ScrolledText(rightFrame, width=20)
 weightLabel1.grid(row=15, column=0, columnspan=3, padx=5, pady=5, sticky=E + W + N + S)
 
-train_data = pandas.DataFrame(index=eval_list)
-test_data = pandas.DataFrame(index=eval_list)
+result_l = ['Accuracy', 'Specificity', 'Sensitivity', 'F1_score', 'Precision', 'Matthews_correlation_coef', 'Time']
+train_data = pandas.DataFrame(index=result_l)
+test_data = pandas.DataFrame(index=result_l)
+weight_data = pandas.DataFrame()
 
 
 # Cac chuc nang
@@ -551,19 +560,24 @@ test_data = pandas.DataFrame(index=eval_list)
 
 # Reset gui
 def reset_gui():
-    global test_data, train_data
+    global test_data, train_data, weight_data
     matrixBtn.configure(state="disabled")
     accuracyLabel.configure(text="Accuracy:")
     specLabel.configure(text="Specificity:")
     senLabel.configure(text="Sensitivity:")
     f1Label.configure(text="F1 score:")
     precLabel.configure(text="Precision:")
-    matLabel.configure(text="Matthews_correlation_coef")
-    weightLabel1.delete('1.0', tkinter.END)
+    matLabel.configure(text="Matthews_correlation_coef:")
+    timeLabel.configure(text="Time:")
     fig_list.clear()
     canvas_list.clear()
+    weightLabel1.configure(state='normal')
+    weightLabel1.delete('1.0', tkinter.END)
     test_data = test_data.iloc[0:0]
     train_data = train_data.iloc[0:0]
+    weight_data = pandas.DataFrame()
+    train_data = pandas.DataFrame(index=result_l)
+    test_data = pandas.DataFrame(index=result_l)
 
 
 # Quay tro lai data ban dau
@@ -691,8 +705,13 @@ def train_nhom2(data1, test=False):
                 draw(file_name, data2)
 
             # Cap nhat cac ket qua
+            weights = model.weights
+            attribute = data.columns.drop([data.columns[len(data.columns) - 1]])
+            w = round(pandas.Series(weights, index=attribute), 4)
+
             result_list = modelEvaluation.to_return_list()
-            update_result(model.measure, result_list, test)
+            result_list.append(final_res)
+            update_result(model.measure, result_list, w, test)
 
             accuracyLabel.configure(text=('Accuracy: ' + str(round(result_list[0] * 100, 2)) + ' %'))
             specLabel.configure(text=('Specificity: ' + str(round(result_list[1] * 100, 2)) + ' %'))
@@ -702,12 +721,6 @@ def train_nhom2(data1, test=False):
             matLabel.configure(text=('Matthews_correlation_coef: ' + str(round(result_list[5] * 100, 2)) + ' %'))
             timeLabel.configure(text=('Time: ' + str(final_res) + ' ms'))
 
-            weights = model.weights
-            attribute = data.columns.drop([data.columns[len(data.columns) - 1]])
-            w = round(pandas.Series(weights, index=attribute), 4)
-
-            weightLabel1.configure(state='normal')
-            weightLabel1.delete('1.0', tkinter.END)
             weight_str = w.to_string(index=True)
             weightLabel1.insert(tkinter.INSERT, weight_str)
             weightLabel1.configure(state='disabled')
@@ -754,13 +767,14 @@ def train_nhom1(data1):
 
 
 # Dien ket qua cua phep do vao train_data hoac test_data
-def update_result(measure, value, test=False):
+def update_result(measure, value, weight, test=False):
     if test:
         if measure not in test_data.columns:
             test_data.insert(0, measure, value)
     else:
         if measure not in train_data.columns:
             train_data.insert(0, measure, value)
+            weight_data.insert(0, measure, weight)
 
 
 # Export ket qua tu 2 train_data va test_data
@@ -771,11 +785,22 @@ def export_result():
         browseLabel.configure(text="You should train/test")
     else:
         filename = "Result/" + os.path.splitext(current_file_name)[0] + ".xlsx"
+
         with pandas.ExcelWriter(filename) as writer:
             if not train_data.empty:
                 train_data.to_excel(writer, sheet_name='Train Result')
+                # for i in range(len(fig_list)):
+                #     buf = io.BytesIO()
+                #     fig_list[i].savefig(buf, format="png")
+                #     buf.seek(0)
+                #     worksheet = writer.sheets["Train Result"]
+                #     worksheet.add_image("C2", "a")
+                #     writer.save()
+                #     buf.close()
             if not test_data.empty:
                 test_data.to_excel(writer, sheet_name='Test Result')
+            weight_data.to_excel(writer, sheet_name="Weight")
+            browseLabel.configure(text="Export to "+os.path.abspath(filename))
 
 
 # Press the green button in the gutter to run the script.
