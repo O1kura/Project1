@@ -97,6 +97,7 @@ def _display_file(event):
                 data = pandas.read_excel(file_name)
             elif file_name.endswith(".csv"):
                 data = pandas.read_csv(file_name)
+            reset_gui()
             draw(current_file_name, data)
 
 
@@ -170,6 +171,7 @@ def import_to_gui(filepath, current_listbox_items):
         file_names_listbox.selection_anchor(index)
 
     # Reset va ve gui
+    reset_gui()
     draw(current_file_name, data)
 
 
@@ -412,7 +414,6 @@ def initial_detail():
 
 # Ve ra gui
 def draw(file_name, data2):
-    reset_gui()
     browseLabel.configure(text="Loading...")
     browseLabel.update_idletasks()
     if data.empty:
@@ -706,7 +707,8 @@ def train_nhom2(data1, test=False):
             file_names_listbox.activate(index)
             file_names_listbox.see(index)
             file_names_listbox.selection_anchor(index)
-
+            
+            canvas_list.clear()
             # Hien thi file
             if file_name.endswith(".xlsx"):
                 data2 = pandas.read_excel(file_name)
