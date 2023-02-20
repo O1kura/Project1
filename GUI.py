@@ -5,9 +5,6 @@ import tkinter
 import shutil
 from tkinter import *
 from tkinter import filedialog, ttk, messagebox
-
-import matplotlib.pyplot
-import matplotlib.pyplot as plt
 import tkinterdnd2
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinterdnd2 import DND_FILES
@@ -100,7 +97,6 @@ def _display_file(event):
                 data = pandas.read_excel(file_name)
             elif file_name.endswith(".csv"):
                 data = pandas.read_csv(file_name)
-            reset_gui()
             draw(current_file_name, data)
 
 
@@ -174,7 +170,6 @@ def import_to_gui(filepath, current_listbox_items):
         file_names_listbox.selection_anchor(index)
 
     # Reset va ve gui
-    reset_gui()
     draw(current_file_name, data)
 
 
@@ -380,6 +375,8 @@ def call(event):
             canvas.get_tk_widget().pack()
 
             def btn_pressed():
+                if not os.path.isdir(save_location):
+                    os.mkdir(save_location)
                 filename = "Result/" + data.columns.tolist()[index] + ".png"
                 fig_list[index].savefig(filename)
                 lb.configure(text="Save to " + os.path.abspath(filename))
@@ -415,6 +412,7 @@ def initial_detail():
 
 # Ve ra gui
 def draw(file_name, data2):
+    reset_gui()
     browseLabel.configure(text="Loading...")
     browseLabel.update_idletasks()
     if data.empty:
